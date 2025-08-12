@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { createInvoiceAction } from "@/app/actions";
+import { createInvoiceAction, getProductPrice } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, ShieldCheck, Zap, Globe } from "lucide-react";
 import { Logo } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const initialState = {
   error: null,
@@ -44,6 +45,8 @@ export default function Home() {
   const [state, formAction] = useFormState(createInvoiceAction, initialState);
   const { toast } = useToast();
   const [email, setEmail] = useState("");
+  const [price, setPrice] = useState<number | null>(null);
+  const [isLoadingPrice, setIsLoadingPrice] = useState(true);
 
   useEffect(() => {
     // Attempt to retrieve email from local storage on component mount
@@ -51,7 +54,28 @@ export default function Home() {
     if (savedEmail) {
       setEmail(savedEmail);
     }
-  }, []);
+    
+    // Fetch product price on mount
+    async function fetchPrice() {
+      try {
+        setIsLoadingPrice(true);
+        const fetchedPrice = await getProductPrice();
+        setPrice(fetchedPrice);
+      } catch (error) {
+        console.error("Failed to fetch price:", error);
+        toast({
+          variant: "destructive",
+          title: "خطا در دریافت قیمت",
+          description: "امکان دریافت قیمت محصول وجود ندارد. لطفا بعدا تلاش کنید.",
+        });
+      } finally {
+        setIsLoadingPrice(false);
+      }
+    }
+
+    fetchPrice();
+
+  }, [toast]);
 
   useEffect(() => {
     if (state?.transactionUrl) {
@@ -108,7 +132,14 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="text-4xl font-bold font-headline text-foreground text-left dir-ltr">
-                $5.00 <span className="text-base font-normal text-muted-foreground">/ پرداخت یک‌باره</span>
+                {isLoadingPrice ? (
+                    <Skeleton className="h-10 w-24" />
+                ) : price !== null ? (
+                    `$${price.toFixed(2)}`
+                ) : (
+                    "N/A"
+                )}
+                <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره</span>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">

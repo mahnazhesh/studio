@@ -11,6 +11,28 @@ type State = {
 
 const emailSchema = z.string().email({ message: "Invalid email address." });
 
+const PRODUCT_NAME = 'V2Ray Config';
+
+export async function getProductPrice(): Promise<number> {
+  try {
+     const emailContent = await determineEmailContent({
+      productName: PRODUCT_NAME,
+      email: 'pricecheck@example.com', // Dummy email for price check
+      purchaseStatus: 'pending',
+    });
+
+    if (typeof emailContent.priceUSD === 'number' && emailContent.priceUSD > 0) {
+      return emailContent.priceUSD;
+    }
+    throw new Error('Price is not valid.');
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
+    console.error("getProductPrice Error:", errorMessage);
+    // Re-throw the error to be caught by the frontend
+    throw new Error('Could not fetch product price.');
+  }
+}
+
 export async function createInvoiceAction(prevState: State, formData: FormData): Promise<State> {
   const email = formData.get('email') as string;
 
@@ -19,13 +41,11 @@ export async function createInvoiceAction(prevState: State, formData: FormData):
     return { error: validation.error.errors[0].message, transactionUrl: null };
   }
 
-  const productName = 'V2Ray Config';
-
   try {
     // 1. Get price from Google Sheet via the AI flow.
     // We pass 'pending' because we only need the price at this stage.
     const emailContent = await determineEmailContent({
-      productName,
+      productName: PRODUCT_NAME,
       email,
       purchaseStatus: 'pending',
     });
@@ -38,8 +58,8 @@ export async function createInvoiceAction(prevState: State, formData: FormData):
     const invoice = await createPlisioInvoice({
         amount: emailContent.priceUSD.toString(),
         currency: 'USD',
-        orderName: productName,
-        orderNumber: `${productName}-${Date.now()}`,
+        orderName: PRODUCT_NAME,
+        orderNumber: `${PRODUCT_NAME}-${Date.now()}`,
         email: email,
     });
     
