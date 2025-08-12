@@ -59,10 +59,8 @@ const getEmailContent = ai.defineTool(
       productName: input.productName,
       action: input.action,
     });
-
-    const finalUrl = webAppUrl.includes('?') 
-        ? `${webAppUrl}&${params.toString()}`
-        : `${webAppUrl}?${params.toString()}`;
+    
+    const finalUrl = `${webAppUrl}?${params.toString()}`;
 
     console.log('Calling Google Apps Script with URL:', finalUrl);
 
