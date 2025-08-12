@@ -91,7 +91,7 @@ const determineEmailContentFlow = ai.defineFlow(
     });
 
     if (typeof content.priceUSD !== 'number') {
-      throw new Error('Failed to retrieve a valid price from the data source.');
+      throw new Error('Failed to retrieve a valid price from the data source. Please check the Google Apps Script and the Google Sheet setup.');
     }
     
     let subject = "اطلاعات خرید شما";
