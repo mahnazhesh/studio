@@ -80,7 +80,7 @@ const determineEmailContentFlow = ai.defineFlow(
     inputSchema: DetermineEmailContentInputSchema,
     outputSchema: DetermineEmailContentOutputSchema,
   },
-  async input => {
+  async (input) => {
     // If status is 'success', we should fetch a config and delete it.
     // Otherwise, for 'pending' status, we just need the price.
     const shouldDelete = input.purchaseStatus === 'success';
@@ -90,7 +90,7 @@ const determineEmailContentFlow = ai.defineFlow(
       shouldDelete: shouldDelete,
     });
 
-    if (typeof content.priceUSD !== 'number') {
+    if (typeof content.priceUSD !== 'number' || content.priceUSD <= 0) {
       throw new Error('Failed to retrieve a valid price from the data source. Please check the Google Apps Script and the Google Sheet setup.');
     }
     
