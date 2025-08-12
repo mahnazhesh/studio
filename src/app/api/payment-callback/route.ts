@@ -21,19 +21,22 @@ export async function POST(request: NextRequest) {
        return NextResponse.json({ error: "Incomplete data" }, { status: 400 });
     }
 
-    let purchaseStatus: 'success' | 'failed' | 'pending' = 'pending';
+    let purchaseStatus: 'success' | 'failed' | 'pending';
     
+    // وضعیت خرید را بر اساس پاسخ Plisio تعیین می‌کنیم
     if (status === 'completed') {
         purchaseStatus = 'success';
     } else if (status === 'cancelled' || status === 'error') {
         purchaseStatus = 'failed';
     } else {
-        // For other statuses, we don't need to send an email, so we can exit.
+        // برای وضعیت‌های دیگر (مثل new یا pending)، هیچ ایمیلی ارسال نمی‌کنیم
+        console.log(`Status is '${status}', no action taken.`);
         return NextResponse.json({ status: "success", message: "Status is not final, no action taken." });
     }
     
-    // Call the AI flow to determine the correct email content.
-    // If successful, the flow's tool will also delete the row from the Google Sheet.
+    // بر اساس وضعیت، ایمیل مناسب را تولید و ارسال می‌کنیم
+    // اگر موفق باشد، کانفیگ ارسال و از شیت حذف می‌شود
+    // اگر ناموفق باشد، ایمیل اطلاع‌رسانی ارسال می‌شود
     const emailData = await determineEmailContent({
         purchaseStatus,
         productName: productName,
@@ -42,16 +45,15 @@ export async function POST(request: NextRequest) {
 
     console.log("Determined email content for user:", userEmail);
     console.log("Email Subject:", emailData.emailSubject);
-    // Be careful not to log the actual config (emailData.emailBody) in production logs.
+    // در محیط واقعی، بدنه ایمیل (کانفیگ) نباید در لاگ‌ها ثبت شود
+    // For security, avoid logging the actual config (emailData.emailBody) in production.
     console.log("Email Body length:", emailData.emailBody.length);
 
-
-    // In a real application, you would now use an email service (like Resend, SendGrid, etc.)
-    // to send the actual email with the subject and body received from the AI flow.
+    // TODO: در یک اپلیکیشن واقعی، اینجا باید سرویس ارسال ایمیل خود را فراخوانی کنید
     // Example: await sendEmail(userEmail, emailData.emailSubject, emailData.emailBody);
     console.log(`Simulating sending email to ${userEmail} with subject "${emailData.emailSubject}"`);
     
-    // Return a 200 OK response to Plisio to acknowledge receipt of the webhook.
+    // پاسخ موفقیت‌آمیز به Plisio برای تایید دریافت وب‌هوک
     return NextResponse.json({ status: "success" });
   } catch (error) {
     console.error("Error processing Plisio callback:", error);

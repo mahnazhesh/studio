@@ -18,7 +18,7 @@ const DetermineEmailContentInputSchema = z.object({
   // We keep purchaseStatus to decide what to do (e.g., fetch and delete on success)
   purchaseStatus: z
     .string()
-    .describe('The status of the purchase (e.g., success, pending).'),
+    .describe('The status of the purchase (e.g., success, pending, failed).'),
 });
 export type DetermineEmailContentInput = z.infer<typeof DetermineEmailContentInputSchema>;
 
@@ -60,7 +60,11 @@ const getEmailContent = ai.defineTool(
       action: input.action,
     });
     
-    const finalUrl = `${webAppUrl}?${params.toString()}`;
+    // Check if the base URL already has query params
+    const finalUrl = webAppUrl.includes('?') 
+      ? `${webAppUrl}&${params.toString()}`
+      : `${webAppUrl}?${params.toString()}`;
+
 
     console.log('Calling Google Apps Script with URL:', finalUrl);
 
@@ -110,6 +114,7 @@ const determineEmailContentFlow = ai.defineFlow(
       throw new Error('Failed to retrieve a valid price from the data source. Please check the Google Apps Script and the Google Sheet setup.');
     }
     
+    // تعیین موضوع ایمیل بر اساس وضعیت پرداخت
     let subject = "اطلاعات خرید شما";
     if (input.purchaseStatus === 'success') {
         subject = `کانفیگ V2Ray شما آماده است`;
@@ -120,8 +125,8 @@ const determineEmailContentFlow = ai.defineFlow(
     }
 
     return {
-      // If emailBody is missing (e.g. price/stock check), provide a default value.
-      emailBody: content.emailBody || 'body for price/stock check',
+      // اگر در حالت‌های ناموفق یا بررسی قیمت، بدنه ایمیل وجود نداشت، یک متن پیش‌فرض قرار می‌دهیم
+      emailBody: content.emailBody || 'پرداخت شما موفقیت‌آمیز نبود. در صورت کسر وجه، با پشتیبانی تماس بگیرید.',
       priceUSD: content.priceUSD,
       emailSubject: subject,
       stockCount: content.stockCount,
