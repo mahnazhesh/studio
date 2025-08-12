@@ -3,7 +3,7 @@
 
 type PlisioInvoicePayload = {
   amount: string;
-  currency: string;
+  currency: 'LTC'; // Only LTC is supported
   orderName: string;
   orderNumber: string;
   email: string;
@@ -19,8 +19,8 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
 
   const params = new URLSearchParams({
     api_key: apiKey,
-    currency: payload.currency,
-    source_currency: 'USD', // The currency of the amount
+    currency: payload.currency, // e.g., 'LTC'
+    source_currency: 'USD', // The currency of the amount in your sheet
     source_amount: payload.amount,
     order_name: payload.orderName,
     order_number: payload.orderNumber,

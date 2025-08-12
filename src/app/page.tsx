@@ -50,8 +50,8 @@ export default function Home() {
       } catch (error: any) {
         console.error("Failed to fetch product info:", error);
         setError(error.message || "یک خطای ناشناخته رخ داده است.");
-        setPrice(0); // در صورت خطا قیمت را صفر میکنیم
-        setStock(0); // و موجودی را هم صفر
+        setPrice(0); 
+        setStock(0);
       } finally {
         setIsLoading(false);
       }
@@ -100,7 +100,7 @@ export default function Home() {
             اینترنت امن، سریع و بدون محدودیت
           </h1>
           <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-            کانفیگ شخصی V2Ray خود را دریافت کرده و از تجربه‌ای بی‌نظیر آنلاین لذت ببرید. پرداخت یک‌باره، دسترسی دائمی.
+            با پرداخت امن از طریق لایت‌کوین (LTC)، کانفیگ شخصی V2Ray خود را دریافت کرده و از تجربه‌ای بی‌نظیر آنلاین لذت ببرید.
           </p>
         </div>
 
@@ -135,7 +135,7 @@ export default function Home() {
                     کانفیگ V2Ray
                   </CardTitle>
                   <CardDescription>
-                    دسترسی دائمی به یک کانفیگ سرور شخصی و پرسرعت V2Ray.
+                    پرداخت با لایت‌کوین (LTC) و تحویل آنی کانفیگ.
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -159,7 +159,7 @@ export default function Home() {
                 ) : (
                      <span className="text-base text-red-500">قیمت نامشخص</span>
                 )}
-                <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره</span>
+                <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره (LTC)</span>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export default function Home() {
                     ) : isOutOfStock ? (
                        "اتمام موجودی"
                     ) : (
-                      "خرید آنی"
+                      "پرداخت با لایت‌کوین (LTC)"
                     )}
                   </Button>
                 </div>
