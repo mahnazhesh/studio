@@ -43,7 +43,8 @@ const getEmailContent = ai.defineTool(
       shouldDelete: z.boolean().describe('If true, fetches one config and deletes the row. If false, just gets the price.'),
     }),
     outputSchema: z.object({
-      emailBody: z.string().describe('The unique config/email body from the sheet.'),
+      // emailBody is optional because when we only fetch the price, the script might not return it.
+      emailBody: z.string().optional().describe('The unique config/email body from the sheet.'),
       priceUSD: z.number().describe('The price of the product in USD.'),
     }),
   },
@@ -99,7 +100,9 @@ const determineEmailContentFlow = ai.defineFlow(
     }
 
     return {
-      ...content,
+      // If emailBody is missing (e.g. price check), provide a default value.
+      emailBody: content.emailBody || 'body for price check',
+      priceUSD: content.priceUSD,
       emailSubject: subject,
     };
   }
