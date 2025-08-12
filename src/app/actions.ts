@@ -25,7 +25,8 @@ export async function getProductInfo(): Promise<{ price: number; stock: number }
       return { price: emailContent.priceUSD, stock: emailContent.stockCount };
     }
     console.error("getProductInfo Error: Received invalid data from flow", emailContent);
-    throw new Error('Product data received from the source is not valid.');
+    // Provide a more specific error if data is invalid but the call succeeded
+    throw new Error('Product data received from the source is not valid. Check sheet contents and script logic.');
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
     console.error("getProductInfo Error:", errorMessage);
