@@ -24,12 +24,13 @@ export async function getProductPrice(): Promise<number> {
     if (typeof emailContent.priceUSD === 'number' && emailContent.priceUSD > 0) {
       return emailContent.priceUSD;
     }
+    console.error("getProductPrice Error: Received invalid price from flow", emailContent);
     throw new Error('Price is not valid.');
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
     console.error("getProductPrice Error:", errorMessage);
     // Re-throw the error to be caught by the frontend
-    throw new Error('Could not fetch product price.');
+    throw new Error(`Could not fetch product price. Details: ${errorMessage}`);
   }
 }
 
