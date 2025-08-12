@@ -50,7 +50,6 @@ export default function Home() {
       } catch (error: any) {
         console.error("Failed to fetch product info:", error);
         setError(error.message || "یک خطای ناشناخته رخ داده است.");
-        // Toast is removed to let the main error message be more prominent.
       } finally {
         setIsLoading(false);
       }
@@ -143,7 +142,7 @@ export default function Home() {
                     <Skeleton className="h-5 w-16" />
                   ) : stock !== null ? (
                     isOutOfStock ? (
-                      <span className="text-destructive">ناموجود</span>
+                      <span className="text-destructive font-bold">موجود نیست</span>
                     ) : (
                       <span>{stock} عدد موجود</span>
                     )
@@ -202,7 +201,7 @@ export default function Home() {
                         در حال پردازش...
                       </>
                     ) : isOutOfStock ? (
-                       "موجودی تمام شد"
+                       "موجود نیست"
                     ) : (
                       "خرید آنی"
                     )}
@@ -239,5 +238,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
