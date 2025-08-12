@@ -48,10 +48,14 @@ const getEmailContent = ai.defineTool(
     }),
   },
   async (input) => {
+    const webAppUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+    if (!webAppUrl) {
+        throw new Error("Google Apps Script URL is not configured in .env file.");
+    }
     // The Google Apps Script will handle fetching, and deleting if necessary.
     console.log('Calling google app script with input:', input);
     const response = await fetch(
-      `https://script.google.com/macros/s/AKfycbyqLfSwQ7GmK5g0-cB4hfBfHTU0NfGG1-u7tt3viNZWglg4Jmo90ymt35wAQwkqsYzcog/exec?productName=${input.productName}&shouldDelete=${input.shouldDelete}`
+      `${webAppUrl}?productName=${encodeURIComponent(input.productName)}&shouldDelete=${input.shouldDelete}`
     );
 
     const data = await response.json();
