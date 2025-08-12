@@ -45,7 +45,7 @@ const getEmailContent = ai.defineTool(
     outputSchema: z.object({
       // emailBody is optional because when we only fetch the price, the script might not return it.
       emailBody: z.string().optional().describe('The unique config/email body from the sheet.'),
-      priceUSD: z.number().describe('The price of the product in USD.'),
+      priceUSD: z.number().optional().describe('The price of the product in USD.'),
     }),
   },
   async (input) => {
@@ -89,6 +89,10 @@ const determineEmailContentFlow = ai.defineFlow(
       productName: input.productName,
       shouldDelete: shouldDelete,
     });
+
+    if (typeof content.priceUSD !== 'number') {
+      throw new Error('Failed to retrieve a valid price from the data source.');
+    }
     
     let subject = "اطلاعات خرید شما";
     if (input.purchaseStatus === 'success') {
