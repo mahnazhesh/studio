@@ -1,7 +1,8 @@
 'use server';
 
 /**
- * @fileOverview A flow to determine the correct email content based on purchase and Plisio payment status.
+ * @fileOverview A flow to determine the correct email content based on purchase.
+ * It fetches a unique config from a Google Sheet and its price.
  *
  * - determineEmailContent - A function that determines the email content.
  * - DetermineEmailContentInput - The input type for the determineEmailContent function.
@@ -12,14 +13,12 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const DetermineEmailContentInputSchema = z.object({
-  purchaseStatus: z
-    .string()
-    .describe('The status of the purchase (e.g., success, pending, failed).'),
-  paymentStatus: z
-    .string()
-    .describe('The status of the Plisio payment (e.g., confirmed, unconfirmed).'),
   productName: z.string().describe('The name of the product purchased.'),
   email: z.string().email().describe('The user email address.'),
+  // We keep purchaseStatus to decide what to do (e.g., fetch and delete on success)
+  purchaseStatus: z
+    .string()
+    .describe('The status of the purchase (e.g., success, pending).'),
 });
 export type DetermineEmailContentInput = z.infer<typeof DetermineEmailContentInputSchema>;
 
@@ -37,56 +36,37 @@ export async function determineEmailContent(input: DetermineEmailContentInput): 
 const getEmailContent = ai.defineTool(
   {
     name: 'getEmailContent',
-    description: 'Retrieves email content and price from a Google Sheet based on purchase and payment status.',
+    description: 'Retrieves a unique email body (config) and price from a Google Sheet. If the purchase is successful, it deletes the used row.',
     inputSchema: z.object({
-      purchaseStatus: z
-        .string()
-        .describe('The status of the purchase (e.g., success, pending, failed).'),
-      paymentStatus: z
-        .string()
-        .describe('The status of the Plisio payment (e.g., confirmed, unconfirmed).'),
       productName: z.string().describe('The name of the product purchased.'),
+      // This tells the script whether to just get the price or to get the config and delete the row.
+      shouldDelete: z.boolean().describe('If true, fetches one config and deletes the row. If false, just gets the price.'),
     }),
     outputSchema: z.object({
-      emailSubject: z.string().describe('The subject of the email.'),
-      emailBody: z.string().describe('The body of the email.'),
+      emailBody: z.string().describe('The unique config/email body from the sheet.'),
       priceUSD: z.number().describe('The price of the product in USD.'),
     }),
   },
   async (input) => {
-    // TODO: Implement the logic to fetch email content and price from Google Sheet
-    // using Google Apps Script or a similar method.
-    // This is a placeholder implementation.
-    console.log('Calling google app script', input);
+    // The Google Apps Script will handle fetching, and deleting if necessary.
+    console.log('Calling google app script with input:', input);
     const response = await fetch(
-      `https://script.google.com/macros/s/AKfycbyqLfSwQ7GmK5g0-cB4hfBfHTU0NfGG1-u7tt3viNZWglg4Jmo90ymt35wAQwkqsYzcog/exec?purchaseStatus=${input.purchaseStatus}&paymentStatus=${input.paymentStatus}&productName=${input.productName}`
+      `https://script.google.com/macros/s/AKfycbyqLfSwQ7GmK5g0-cB4hfBfHTU0NfGG1-u7tt3viNZWglg4Jmo90ymt35wAQwkqsYzcog/exec?productName=${input.productName}&shouldDelete=${input.shouldDelete}`
     );
 
     const data = await response.json();
-    console.log('google app script return', data);
+    console.log('google app script returned:', data);
+    
+    if (data.error) {
+        throw new Error(data.error);
+    }
+
     return {
-      emailSubject: data.emailSubject ?? 'Your Purchase',
-      emailBody: data.emailBody ?? 'Thank you for your purchase!',
+      emailBody: data.emailBody ?? 'از خرید شما سپاسگزاریم. کانفیگ شما به زودی ارسال خواهد شد.',
       priceUSD: data.priceUSD ?? 0.0,
     };
   }
 );
-
-const determineEmailContentPrompt = ai.definePrompt({
-  name: 'determineEmailContentPrompt',
-  tools: [getEmailContent],
-  input: {schema: DetermineEmailContentInputSchema},
-  output: {schema: DetermineEmailContentOutputSchema},
-  prompt: `Determine the appropriate email content based on the purchase and payment status.
-
-  The user's email is: {{{email}}}
-
-  Use the getEmailContent tool to retrieve the email subject, body, and product price.
-
-  Purchase Status: {{{purchaseStatus}}}
-  Payment Status: {{{paymentStatus}}}
-  Product Name: {{{productName}}}`, 
-});
 
 const determineEmailContentFlow = ai.defineFlow(
   {
@@ -95,7 +75,27 @@ const determineEmailContentFlow = ai.defineFlow(
     outputSchema: DetermineEmailContentOutputSchema,
   },
   async input => {
-    const {output} = await determineEmailContentPrompt(input);
-    return output!;
+    // If status is 'success', we should fetch a config and delete it.
+    // Otherwise, for 'pending' status, we just need the price.
+    const shouldDelete = input.purchaseStatus === 'success';
+
+    const content = await getEmailContent({
+      productName: input.productName,
+      shouldDelete: shouldDelete,
+    });
+    
+    let subject = "اطلاعات خرید شما";
+    if (input.purchaseStatus === 'success') {
+        subject = `کانفیگ V2Ray شما آماده است`;
+    } else if (input.purchaseStatus === 'pending') {
+        subject = `سفارش شما برای کانفیگ V2Ray ثبت شد`;
+    } else if (input.purchaseStatus === 'failed') {
+        subject = `پرداخت برای کانفیگ V2Ray ناموفق بود`;
+    }
+
+    return {
+      ...content,
+      emailSubject: subject,
+    };
   }
 );

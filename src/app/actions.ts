@@ -22,12 +22,12 @@ export async function createInvoiceAction(prevState: State, formData: FormData):
   const productName = 'V2Ray Config';
 
   try {
-    // 1. Get price from Google Sheet via the AI flow
+    // 1. Get price from Google Sheet via the AI flow.
+    // We pass 'pending' because we only need the price at this stage.
     const emailContent = await determineEmailContent({
-      purchaseStatus: 'pending',
-      paymentStatus: 'unconfirmed',
       productName,
       email,
+      purchaseStatus: 'pending',
     });
 
     if (typeof emailContent.priceUSD !== 'number' || emailContent.priceUSD <= 0) {

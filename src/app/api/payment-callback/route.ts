@@ -8,13 +8,11 @@ export async function POST(request: NextRequest) {
     const body = await request.formData();
     
     // Extract data from Plisio's callback.
-    // The field names are based on Plisio's documentation and might need adjustment.
     const status = body.get("status") as string; // e.g., 'completed', 'cancelled', 'error'
     const orderNumber = body.get("order_number") as string;
     const userEmail = body.get("email") as string;
-    const amount = body.get("source_amount") as string;
-    const currency = body.get("source_currency") as string;
-    const txnId = body.get("txn_id") as string;
+    
+    const productName = "V2Ray Config"; // Assuming a single product for now
 
     console.log(`Received Plisio callback for order ${orderNumber} with status: ${status}`);
 
@@ -23,32 +21,35 @@ export async function POST(request: NextRequest) {
        return NextResponse.json({ error: "Incomplete data" }, { status: 400 });
     }
 
-    let purchaseStatus = "pending";
-    let paymentStatus = "unconfirmed";
-
+    let purchaseStatus: 'success' | 'failed' | 'pending' = 'pending';
+    
     if (status === 'completed') {
         purchaseStatus = 'success';
-        paymentStatus = 'confirmed';
     } else if (status === 'cancelled' || status === 'error') {
         purchaseStatus = 'failed';
-        paymentStatus = 'failed';
+    } else {
+        // For other statuses, we don't need to send an email, so we can exit.
+        return NextResponse.json({ status: "success", message: "Status is not final, no action taken." });
     }
     
-    // Call the AI flow to determine the correct email content
+    // Call the AI flow to determine the correct email content.
+    // If successful, the flow's tool will also delete the row from the Google Sheet.
     const emailData = await determineEmailContent({
         purchaseStatus,
-        paymentStatus,
-        productName: "V2Ray Config", // Should ideally be retrieved based on orderNumber
+        productName: productName,
         email: userEmail
     });
 
     console.log("Determined email content for user:", userEmail);
     console.log("Email Subject:", emailData.emailSubject);
-    console.log("Email Body:", emailData.emailBody);
+    // Be careful not to log the actual config (emailData.emailBody) in production logs.
+    console.log("Email Body length:", emailData.emailBody.length);
+
 
     // In a real application, you would now use an email service (like Resend, SendGrid, etc.)
     // to send the actual email with the subject and body received from the AI flow.
     // Example: await sendEmail(userEmail, emailData.emailSubject, emailData.emailBody);
+    console.log(`Simulating sending email to ${userEmail} with subject "${emailData.emailSubject}"`);
     
     // Return a 200 OK response to Plisio to acknowledge receipt of the webhook.
     return NextResponse.json({ status: "success" });
