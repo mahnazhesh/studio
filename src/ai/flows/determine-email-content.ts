@@ -43,7 +43,6 @@ const getEmailContent = ai.defineTool(
       shouldDelete: z.boolean().describe('If true, fetches one config and deletes the row. If false, just gets the price.'),
     }),
     outputSchema: z.object({
-      // emailBody is optional because when we only fetch the price, the script might not return it.
       emailBody: z.string().optional().describe('The unique config/email body from the sheet.'),
       priceUSD: z.number().optional().describe('The price of the product in USD.'),
     }),
@@ -53,20 +52,36 @@ const getEmailContent = ai.defineTool(
     if (!webAppUrl) {
         throw new Error("Google Apps Script URL is not configured in .env file.");
     }
-    // The Google Apps Script will handle fetching, and deleting if necessary.
-    console.log('Calling google app script with input:', input);
-    const response = await fetch(
-      `${webAppUrl}?productName=${encodeURIComponent(input.productName)}&shouldDelete=${input.shouldDelete}`
-    );
-
-    const data = await response.json();
-    console.log('google app script returned:', data);
     
-    if (data.error) {
-        throw new Error(data.error);
+    const params = new URLSearchParams({
+      productName: input.productName,
+      shouldDelete: String(input.shouldDelete),
+    });
+
+    // Correctly construct the URL, handling if webAppUrl already has query params.
+    const finalUrl = webAppUrl.includes('?') 
+        ? `${webAppUrl}&${params.toString()}`
+        : `${webAppUrl}?${params.toString()}`;
+
+    console.log('Calling Google Apps Script with URL:', finalUrl);
+
+    const response = await fetch(finalUrl, {
+      redirect: 'follow', // Important for Apps Script web apps
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Google Apps Script responded with an error:', response.status, errorText);
+        throw new Error(`Google Apps Script request failed with status ${response.status}: ${errorText}`);
     }
 
-    // When just fetching the price, the apps script returns a placeholder emailBody.
+    const data = await response.json();
+    console.log('Google Apps Script returned:', data);
+    
+    if (data.error) {
+        throw new Error(`Error from Google Apps Script: ${data.error}`);
+    }
+
     return {
       emailBody: data.emailBody,
       priceUSD: data.priceUSD,
@@ -91,6 +106,7 @@ const determineEmailContentFlow = ai.defineFlow(
     });
 
     if (typeof content.priceUSD !== 'number' || content.priceUSD <= 0) {
+      console.error("Invalid price received from tool:", content);
       throw new Error('Failed to retrieve a valid price from the data source. Please check the Google Apps Script and the Google Sheet setup.');
     }
     
