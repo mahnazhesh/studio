@@ -15,9 +15,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck, Zap, Globe, AlertCircle } from "lucide-react";
+import { Loader2, ShieldCheck, Zap, Globe } from "lucide-react";
 import { Logo } from "@/components/icons";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 
 const initialState = {
@@ -32,10 +31,10 @@ function PurchaseButton() {
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Processing...
+          در حال پردازش...
         </>
       ) : (
-        "Purchase Now"
+        "خرید آنی"
       )}
     </Button>
   );
@@ -61,7 +60,7 @@ export default function Home() {
     if (state?.error) {
        toast({
         variant: "destructive",
-        title: "An error occurred",
+        title: "خطایی رخ داد",
         description: state.error,
       });
     }
@@ -81,7 +80,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Logo className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold font-headline text-foreground">
-              V2Ray Store
+              V2Ray فروشگاه
             </span>
           </div>
         </nav>
@@ -90,11 +89,10 @@ export default function Home() {
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground tracking-tighter">
-            Secure, Fast, Unrestricted Internet
+            اینترنت امن، سریع و بدون محدودیت
           </h1>
           <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-            Get your personal V2Ray configuration and enjoy a seamless online
-            experience. One-time payment, lifetime access.
+            کانفیگ شخصی V2Ray خود را دریافت کرده و از تجربه‌ای بی‌نظیر آنلاین لذت ببرید. پرداخت یک‌باره، دسترسی دائمی.
           </p>
         </div>
 
@@ -102,35 +100,35 @@ export default function Home() {
           <Card className="w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300">
             <CardHeader>
               <CardTitle className="font-headline text-2xl">
-                V2Ray Config
+                کانفیگ V2Ray
               </CardTitle>
               <CardDescription>
-                Lifetime access to a personal, high-speed V2Ray server configuration.
+                دسترسی دائمی به یک کانفیگ سرور شخصی و پرسرعت V2Ray.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-               <div className="text-4xl font-bold font-headline text-foreground">
-                $5.00 <span className="text-base font-normal text-muted-foreground">/ one-time</span>
+               <div className="text-4xl font-bold font-headline text-foreground text-left dir-ltr">
+                $5.00 <span className="text-base font-normal text-muted-foreground">/ پرداخت یک‌باره</span>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-primary" />
-                  Enhanced Security & Privacy
+                  امنیت و حریم خصوصی پیشرفته
                 </li>
                 <li className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" />
-                  High-Speed Connection
+                  اتصال پرسرعت
                 </li>
                 <li className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-primary" />
-                  Bypass Geo-restrictions
+                  عبور از محدودیت‌های جغرافیایی
                 </li>
               </ul>
               <form action={formAction}>
                 <div className="space-y-4">
                    <div className="space-y-2">
-                    <Label htmlFor="email" className="font-bold">Email Address</Label>
-                    <p className="text-xs text-muted-foreground">Your V2Ray config will be sent to this email.</p>
+                    <Label htmlFor="email" className="font-bold">آدرس ایمیل</Label>
+                    <p className="text-xs text-muted-foreground">کانفیگ V2Ray به این ایمیل ارسال خواهد شد.</p>
                     <Input
                       id="email"
                       name="email"
@@ -140,6 +138,7 @@ export default function Home() {
                       value={email}
                       onChange={handleEmailChange}
                       className="bg-background"
+                      dir="ltr"
                     />
                   </div>
                   <PurchaseButton />
@@ -151,26 +150,26 @@ export default function Home() {
           <Card className="w-full shadow-lg flex flex-col items-center justify-center text-center bg-card/50 border-dashed">
             <CardHeader>
               <CardTitle className="font-headline text-2xl">
-                New Products
+                محصولات جدید
               </CardTitle>
               <CardDescription>
-                More privacy solutions are on the way.
+                راهکارهای بیشتری برای حریم خصوصی در راه است.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-4xl font-bold font-headline text-muted-foreground animate-pulse">
-                Coming Soon
+                به زودی
               </p>
             </CardContent>
             <CardFooter>
-                 <p className="text-xs text-muted-foreground">Stay tuned for updates!</p>
+                 <p className="text-xs text-muted-foreground">منتظر به‌روزرسانی‌ها باشید!</p>
             </CardFooter>
           </Card>
         </div>
       </main>
 
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm">
-        <p>&copy; {new Date().getFullYear()} V2Ray Store. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} فروشگاه V2Ray. تمام حقوق محفوظ است.</p>
       </footer>
     </div>
   );
