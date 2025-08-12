@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/determine-email-content.ts';
+// No flows are needed for the core functionality anymore.
+// This file is kept for potential future AI features.

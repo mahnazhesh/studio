@@ -1,8 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { determineEmailContent } from '@/ai/flows/determine-email-content';
 import { createPlisioInvoice } from '@/lib/plisio';
+import { getProductInfo as fetchProductInfo } from '@/lib/gscript';
 
 type State = {
   error: string | null;
@@ -15,21 +15,12 @@ const PRODUCT_NAME = 'V2Ray Config';
 
 export async function getProductInfo(): Promise<{ price: number; stock: number }> {
   try {
-     const emailContent = await determineEmailContent({
-      productName: PRODUCT_NAME,
-      email: 'pricecheck@example.com', // Dummy email for price check
-      purchaseStatus: 'pending', // 'pending' maps to 'getInfo' action
-    });
-
-    if (typeof emailContent.priceUSD === 'number' && typeof emailContent.stockCount === 'number') {
-      return { price: emailContent.priceUSD, stock: emailContent.stockCount };
-    }
-    console.error("getProductInfo Error: Received invalid data from flow", emailContent);
-    // Provide a more specific error if data is invalid but the call succeeded
-    throw new Error('دیتای محصول دریافت شده از سرور معتبر نیست. ممکن است شیت خالی باشد یا مشکلی در اسکریپت وجود دارد.');
+    const { price, stock } = await fetchProductInfo();
+    return { price, stock };
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
-    console.error("getProductInfo Error:", errorMessage);
+    console.error("getProductInfo Action Error:", errorMessage);
+    // Re-throw with a user-friendly message
     throw new Error(`امکان دریافت اطلاعات محصول وجود ندارد. جزئیات: ${errorMessage}`);
   }
 }
@@ -43,24 +34,20 @@ export async function createInvoiceAction(prevState: State, formData: FormData):
   }
 
   try {
-    // 1. Get price and check stock from Google Sheet via the AI flow.
-    const productInfo = await determineEmailContent({
-      productName: PRODUCT_NAME,
-      email,
-      purchaseStatus: 'pending', // 'pending' maps to 'getInfo' action
-    });
+    // 1. Get price and check stock directly.
+    const productInfo = await fetchProductInfo();
 
-    if (typeof productInfo.priceUSD !== 'number' || productInfo.priceUSD <= 0) {
+    if (typeof productInfo.price !== 'number' || productInfo.price <= 0) {
       throw new Error('امکان تشخیص قیمت محصول وجود ندارد. لطفا بعدا تلاش کنید.');
     }
     
-    if (typeof productInfo.stockCount !== 'number' || productInfo.stockCount <= 0) {
+    if (typeof productInfo.stock !== 'number' || productInfo.stock <= 0) {
        throw new Error('موجودی محصول به اتمام رسیده است.');
     }
     
     // 2. Create an invoice with Plisio
     const invoice = await createPlisioInvoice({
-        amount: productInfo.priceUSD.toString(),
+        amount: productInfo.price.toString(),
         currency: 'LTC', // پرداخت فقط با لایت‌کوین
         orderName: PRODUCT_NAME,
         orderNumber: `${PRODUCT_NAME}-${Date.now()}`,
