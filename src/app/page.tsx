@@ -50,6 +50,8 @@ export default function Home() {
       } catch (error: any) {
         console.error("Failed to fetch product info:", error);
         setError(error.message || "یک خطای ناشناخته رخ داده است.");
+        setPrice(0); // در صورت خطا قیمت را صفر میکنیم
+        setStock(0); // و موجودی را هم صفر
       } finally {
         setIsLoading(false);
       }
@@ -140,14 +142,10 @@ export default function Home() {
                   <Package className="h-5 w-5 text-primary" />
                   {isLoading ? (
                     <Skeleton className="h-5 w-16" />
-                  ) : stock !== null ? (
-                    isOutOfStock ? (
+                  ) : isOutOfStock ? (
                       <span className="text-destructive font-bold">اتمام موجودی</span>
                     ) : (
                       <span>{stock} عدد موجود</span>
-                    )
-                  ) : (
-                     <span className="text-destructive">نامشخص</span>
                   )}
                 </div>
               </div>
@@ -159,7 +157,7 @@ export default function Home() {
                 ) : price !== null && price > 0 ? (
                     `$${price.toFixed(2)}`
                 ) : (
-                     <span className="text-red-500">نامشخص</span>
+                     <span className="text-base text-red-500">قیمت نامشخص</span>
                 )}
                 <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره</span>
               </div>
