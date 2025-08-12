@@ -1,69 +1,78 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { determineEmailContent } from "@/ai/flows/determine-email-content";
-import { sendEmail } from "@/lib/email";
 
 // This is the webhook handler for Plisio.
 // Plisio will send a POST request to this endpoint when a payment status changes.
+// This handler's only job is to call the Google Apps Script to perform the final actions.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.formData();
     
     // Extract data from Plisio's callback.
     const status = body.get("status") as string; // e.g., 'completed', 'cancelled', 'error'
-    const orderNumber = body.get("order_number") as string;
     const userEmail = body.get("email") as string;
-    
     const productName = "V2Ray Config"; // Assuming a single product for now
 
-    console.log(`Received Plisio callback for order ${orderNumber} with status: ${status}`);
+    console.log(`Received Plisio callback for ${userEmail} with status: ${status}`);
 
     if (!status || !userEmail) {
        console.error("Incomplete Plisio callback data received.", { status, userEmail });
        return NextResponse.json({ error: "Incomplete data" }, { status: 400 });
     }
 
-    let purchaseStatus: 'success' | 'failed' | 'pending';
+    let action: 'sendSuccessEmail' | 'sendFailureEmail' | null = null;
     
-    // وضعیت خرید را بر اساس پاسخ Plisio تعیین می‌کنیم
+    // Determine the action for the Apps Script based on Plisio's status
     if (status === 'completed') {
-        purchaseStatus = 'success';
+        action = 'sendSuccessEmail';
     } else if (status === 'cancelled' || status === 'error') {
-        purchaseStatus = 'failed';
+        action = 'sendFailureEmail';
     } else {
-        // برای وضعیت‌های دیگر (مثل new یا pending)، هیچ ایمیلی ارسال نمی‌کنیم
+        // For other statuses (like 'new' or 'pending'), do nothing.
         console.log(`Status is '${status}', no action taken.`);
         return NextResponse.json({ status: "success", message: "Status is not final, no action taken." });
     }
     
-    // بر اساس وضعیت، ایمیل مناسب را تولید می‌کنیم
-    // اگر موفق باشد، کانفیگ ارسال و از شیت حذف می‌شود
-    // اگر ناموفق باشد، ایمیل اطلاع‌رسانی ارسال می‌شود
-    const emailData = await determineEmailContent({
-        purchaseStatus,
-        productName: productName,
-        email: userEmail
-    });
+    // Call the Google Apps Script to handle everything (get config, delete row, send email)
+    const webAppUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+    if (!webAppUrl) {
+      throw new Error("Google Apps Script URL is not configured in .env file.");
+    }
 
-    console.log("Determined email content for user:", userEmail);
-    console.log("Email Subject:", emailData.emailSubject);
-
-    // ارسال ایمیل واقعی
-    await sendEmail({
-      to: userEmail,
-      subject: emailData.emailSubject,
-      text: emailData.emailBody, // برای سازگاری با کلاینت‌های بدون HTML
-      html: `<div dir="rtl" style="font-family: sans-serif; text-align: right;">${emailData.emailBody.replace(/\n/g, '<br>')}</div>`,
+    const params = new URLSearchParams({
+      action,
+      productName,
+      userEmail,
     });
     
-    console.log(`Successfully sent email to ${userEmail} with subject "${emailData.emailSubject}"`);
+    const finalUrl = webAppUrl.includes('?') 
+      ? `${webAppUrl}&${params.toString()}`
+      : `${webAppUrl}?${params.toString()}`;
+
+    console.log(`Calling Google Apps Script with URL: ${finalUrl}`);
     
-    // پاسخ موفقیت‌آمیز به Plisio برای تایید دریافت وب‌هوک
-    return NextResponse.json({ status: "success" });
+    const scriptResponse = await fetch(finalUrl, { redirect: 'follow', cache: 'no-store' });
+
+    if (!scriptResponse.ok) {
+        const errorText = await scriptResponse.text();
+        console.error('Google Apps Script responded with an error:', scriptResponse.status, errorText);
+        throw new Error(`Google Apps Script request failed with status ${scriptResponse.status}: ${errorText}`);
+    }
+    
+    const responseData = await scriptResponse.json();
+    console.log('Google Apps Script returned:', responseData);
+
+    if (responseData.error) {
+        throw new Error(`Error from Google Apps Script: ${responseData.error}`);
+    }
+
+    // Respond to Plisio that the webhook was received successfully.
+    return NextResponse.json({ status: "success", message: "Webhook processed by Apps Script." });
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error processing Plisio callback:", errorMessage);
-    // در صورت بروز خطا در ارسال ایمیل، بهتر است به Plisio پاسخ موفقیت‌آمیز ندهیم
-    // تا بتواند دوباره تلاش کند (اگر این قابلیت را داشته باشد).
+    // It's better not to return a success response to Plisio if our backend fails,
+    // so it might retry the webhook.
     return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 });
   }
 }
