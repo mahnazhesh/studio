@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { createInvoiceAction, getProductPrice } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
@@ -15,37 +14,19 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck, Zap, Globe } from "lucide-react";
+import { Loader2, ShieldCheck, Zap, Globe, Terminal } from "lucide-react";
 import { Logo } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
-
 
 const initialState = {
   error: null,
   transactionUrl: null,
 };
 
-function PurchaseButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" className="w-full font-bold" disabled={pending}>
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          در حال پردازش...
-        </>
-      ) : (
-        "خرید آنی"
-      )}
-    </Button>
-  );
-}
-
 export default function Home() {
-  const [state, formAction] = useActionState(createInvoiceAction, initialState);
+  const [state, formAction, isPending] = useActionState(createInvoiceAction, initialState);
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [price, setPrice] = useState<number | null>(null);
@@ -53,13 +34,11 @@ export default function Home() {
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
 
   useEffect(() => {
-    // Attempt to retrieve email from local storage on component mount
     const savedEmail = localStorage.getItem("userEmail");
     if (savedEmail) {
       setEmail(savedEmail);
     }
     
-    // Fetch product price on mount
     async function fetchPrice() {
       try {
         setIsLoadingPrice(true);
@@ -98,7 +77,6 @@ export default function Home() {
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
-    // Save email to local storage on change
     localStorage.setItem("userEmail", e.target.value);
   };
 
@@ -194,7 +172,16 @@ export default function Home() {
                       dir="ltr"
                     />
                   </div>
-                  <PurchaseButton />
+                  <Button type="submit" className="w-full font-bold" disabled={isPending}>
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        در حال پردازش...
+                      </>
+                    ) : (
+                      "خرید آنی"
+                    )}
+                  </Button>
                 </div>
               </form>
             </CardContent>
