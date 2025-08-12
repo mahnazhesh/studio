@@ -19,6 +19,9 @@ import { Loader2, ShieldCheck, Zap, Globe } from "lucide-react";
 import { Logo } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
+
 
 const initialState = {
   error: null,
@@ -46,6 +49,7 @@ export default function Home() {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [price, setPrice] = useState<number | null>(null);
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
 
   useEffect(() => {
@@ -59,10 +63,12 @@ export default function Home() {
     async function fetchPrice() {
       try {
         setIsLoadingPrice(true);
+        setPriceError(null);
         const fetchedPrice = await getProductPrice();
         setPrice(fetchedPrice);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch price:", error);
+        setPriceError(error.message || "یک خطای ناشناخته رخ داده است.");
         toast({
           variant: "destructive",
           title: "خطا در دریافت قیمت",
@@ -120,6 +126,22 @@ export default function Home() {
           </p>
         </div>
 
+        {priceError && (
+            <Alert variant="destructive" className="max-w-4xl mx-auto mb-8">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>خطا در ارتباط با سرور</AlertTitle>
+              <AlertDescription>
+                <p>امکان دریافت قیمت محصول وجود ندارد. لطفاً از موارد زیر اطمینان حاصل کنید:</p>
+                <ul className="list-disc pl-5 mt-2 text-xs">
+                    <li>آدرس وب اپلیکیشن (Google Apps Script URL) در فایل `.env` صحیح است.</li>
+                    <li>گوگل شیت شما حداقل یک ردیف محصول با `productName` و `priceUSD` دارد.</li>
+                    <li>اسکریپت Google Apps Script شما به درستی به عنوان Web App پابلیش شده و دسترسی آن روی "Anyone" تنظیم شده است.</li>
+                </ul>
+                <p className="mt-2 text-xs font-mono bg-muted p-2 rounded">جزئیات خطا: {priceError}</p>
+              </AlertDescription>
+            </Alert>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <Card className="w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300">
             <CardHeader>
@@ -137,7 +159,7 @@ export default function Home() {
                 ) : price !== null ? (
                     `$${price.toFixed(2)}`
                 ) : (
-                    "N/A"
+                     <span className="text-red-500">ناموجود</span>
                 )}
                 <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره</span>
               </div>

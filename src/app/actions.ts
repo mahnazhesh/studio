@@ -25,11 +25,12 @@ export async function getProductPrice(): Promise<number> {
       return emailContent.priceUSD;
     }
     console.error("getProductPrice Error: Received invalid price from flow", emailContent);
-    throw new Error('Price is not valid.');
+    // Provide a more specific error message if the price is invalid
+    throw new Error('Price received from the source is not valid or is zero.');
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
     console.error("getProductPrice Error:", errorMessage);
-    // Re-throw the error to be caught by the frontend
+    // Re-throw the error with details to be caught by the frontend
     throw new Error(`Could not fetch product price. Details: ${errorMessage}`);
   }
 }

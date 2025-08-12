@@ -65,9 +65,10 @@ const getEmailContent = ai.defineTool(
         throw new Error(data.error);
     }
 
+    // When just fetching the price, the apps script returns a placeholder emailBody.
     return {
-      emailBody: data.emailBody ?? 'از خرید شما سپاسگزاریم. کانفیگ شما به زودی ارسال خواهد شد.',
-      priceUSD: data.priceUSD ?? 0.0,
+      emailBody: data.emailBody,
+      priceUSD: data.priceUSD,
     };
   }
 );
