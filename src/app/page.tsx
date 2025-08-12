@@ -50,11 +50,7 @@ export default function Home() {
       } catch (error: any) {
         console.error("Failed to fetch product info:", error);
         setError(error.message || "یک خطای ناشناخته رخ داده است.");
-        toast({
-          variant: "destructive",
-          title: "خطا در دریافت اطلاعات محصول",
-          description: "امکان دریافت قیمت و موجودی محصول وجود ندارد. لطفا بعدا تلاش کنید.",
-        });
+        // Toast is removed to let the main error message be more prominent.
       } finally {
         setIsLoading(false);
       }
@@ -62,7 +58,7 @@ export default function Home() {
 
     fetchInfo();
 
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (state?.transactionUrl) {
@@ -112,12 +108,17 @@ export default function Home() {
               <Terminal className="h-4 w-4" />
               <AlertTitle>خطا در ارتباط با سرور</AlertTitle>
               <AlertDescription>
-                <p>امکان دریافت اطلاعات محصول وجود ندارد. لطفاً از موارد زیر اطمینان حاصل کنید:</p>
-                <ul className="list-disc pl-5 mt-2 text-xs">
-                    <li>آدرس وب اپلیکیشن (Google Apps Script URL) در فایل `.env` صحیح است.</li>
-                    <li>برای آخرین نسخه کد Google Apps Script خود یک **New deployment** ساخته‌اید و URL جدید را در `.env` قرار داده‌اید.</li>
-                    <li>گوگل شیت شما حداقل یک ردیف محصول با `productName` و `priceUSD` و `emailBody` معتبر دارد.</li>
-                    <li>دسترسی وب اپ (Web App) روی "Anyone" تنظیم شده است.</li>
+                <p>امکان دریافت اطلاعات محصول (قیمت و موجودی) وجود ندارد. لطفاً موارد زیر را با دقت بررسی کنید:</p>
+                <ul className="list-disc pl-5 mt-2 text-sm">
+                    <li>**آدرس وب اپلیکیشن:** مطمئن شوید آدرس (Google Apps Script URL) در فایل `.env` صحیح است.</li>
+                    <li>**دیپلوی جدید:** برای آخرین نسخه کد Google Apps Script خود حتما یک **New deployment** ساخته‌اید و URL جدید را در `.env` قرار داده‌اید.</li>
+                    <li>**نام ستون‌ها:** مطمئن شوید گوگل شیت شما **دقیقا** این سه ستون را با همین نام‌ها (حساس به حروف کوچک و بزرگ) دارد:
+                      <code className="block bg-muted p-1 my-1 rounded text-xs">productName</code>
+                      <code className="block bg-muted p-1 my-1 rounded text-xs">priceUSD</code>
+                      <code className="block bg-muted p-1 my-1 rounded text-xs">emailBody</code>
+                    </li>
+                    <li>**دسترسی:** دسترسی وب اپ (Web App) روی "Anyone" تنظیم شده باشد.</li>
+                    <li>**محتوای شیت:** حداقل یک ردیف محصول با `productName` برابر با `V2Ray Config` و یک قیمت معتبر در ستون `priceUSD` داشته باشید.</li>
                 </ul>
                 <p className="mt-2 text-xs font-mono bg-muted p-2 rounded">جزئیات خطا: {error}</p>
               </AlertDescription>
@@ -125,7 +126,7 @@ export default function Home() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <Card className={`w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'opacity-50' : ''}`}>
+          <Card className={`w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300 ${isOutOfStock && !isLoading ? 'opacity-50' : ''}`}>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
@@ -146,7 +147,9 @@ export default function Home() {
                     ) : (
                       <span>{stock} عدد موجود</span>
                     )
-                  ) : null}
+                  ) : (
+                     <span className="text-destructive">نامشخص</span>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -236,3 +239,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
