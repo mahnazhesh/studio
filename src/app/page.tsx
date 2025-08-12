@@ -142,7 +142,7 @@ export default function Home() {
                     <Skeleton className="h-5 w-16" />
                   ) : stock !== null ? (
                     isOutOfStock ? (
-                      <span className="text-destructive font-bold">موجود نیست</span>
+                      <span className="text-destructive font-bold">اتمام موجودی</span>
                     ) : (
                       <span>{stock} عدد موجود</span>
                     )
@@ -201,7 +201,7 @@ export default function Home() {
                         در حال پردازش...
                       </>
                     ) : isOutOfStock ? (
-                       "موجود نیست"
+                       "اتمام موجودی"
                     ) : (
                       "خرید آنی"
                     )}
