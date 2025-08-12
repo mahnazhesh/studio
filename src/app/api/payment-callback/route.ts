@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { determineEmailContent } from "@/ai/flows/determine-email-content";
+import { sendEmail } from "@/lib/email";
 
 // This is the webhook handler for Plisio.
 // Plisio will send a POST request to this endpoint when a payment status changes.
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ status: "success", message: "Status is not final, no action taken." });
     }
     
-    // بر اساس وضعیت، ایمیل مناسب را تولید و ارسال می‌کنیم
+    // بر اساس وضعیت، ایمیل مناسب را تولید می‌کنیم
     // اگر موفق باشد، کانفیگ ارسال و از شیت حذف می‌شود
     // اگر ناموفق باشد، ایمیل اطلاع‌رسانی ارسال می‌شود
     const emailData = await determineEmailContent({
@@ -45,18 +46,24 @@ export async function POST(request: NextRequest) {
 
     console.log("Determined email content for user:", userEmail);
     console.log("Email Subject:", emailData.emailSubject);
-    // در محیط واقعی، بدنه ایمیل (کانفیگ) نباید در لاگ‌ها ثبت شود
-    // For security, avoid logging the actual config (emailData.emailBody) in production.
-    console.log("Email Body length:", emailData.emailBody.length);
 
-    // TODO: در یک اپلیکیشن واقعی، اینجا باید سرویس ارسال ایمیل خود را فراخوانی کنید
-    // Example: await sendEmail(userEmail, emailData.emailSubject, emailData.emailBody);
-    console.log(`Simulating sending email to ${userEmail} with subject "${emailData.emailSubject}"`);
+    // ارسال ایمیل واقعی
+    await sendEmail({
+      to: userEmail,
+      subject: emailData.emailSubject,
+      text: emailData.emailBody, // برای سازگاری با کلاینت‌های بدون HTML
+      html: `<div dir="rtl" style="font-family: sans-serif; text-align: right;">${emailData.emailBody.replace(/\n/g, '<br>')}</div>`,
+    });
+    
+    console.log(`Successfully sent email to ${userEmail} with subject "${emailData.emailSubject}"`);
     
     // پاسخ موفقیت‌آمیز به Plisio برای تایید دریافت وب‌هوک
     return NextResponse.json({ status: "success" });
   } catch (error) {
-    console.error("Error processing Plisio callback:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error processing Plisio callback:", errorMessage);
+    // در صورت بروز خطا در ارسال ایمیل، بهتر است به Plisio پاسخ موفقیت‌آمیز ندهیم
+    // تا بتواند دوباره تلاش کند (اگر این قابلیت را داشته باشد).
+    return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 });
   }
 }
