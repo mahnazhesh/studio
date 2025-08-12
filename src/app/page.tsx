@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { createInvoiceAction, getProductPrice } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ function PurchaseButton() {
 }
 
 export default function Home() {
-  const [state, formAction] = useFormState(createInvoiceAction, initialState);
+  const [state, formAction] = useActionState(createInvoiceAction, initialState);
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [price, setPrice] = useState<number | null>(null);
