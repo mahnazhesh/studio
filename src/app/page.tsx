@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { createInvoiceAction, getProductPrice } from "@/app/actions";
+import { createInvoiceAction, getProductInfo } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck, Zap, Globe, Terminal } from "lucide-react";
+import { Loader2, ShieldCheck, Zap, Globe, Terminal, Package } from "lucide-react";
 import { Logo } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,8 +30,9 @@ export default function Home() {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [price, setPrice] = useState<number | null>(null);
-  const [priceError, setPriceError] = useState<string | null>(null);
-  const [isLoadingPrice, setIsLoadingPrice] = useState(true);
+  const [stock, setStock] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("userEmail");
@@ -39,26 +40,27 @@ export default function Home() {
       setEmail(savedEmail);
     }
     
-    async function fetchPrice() {
+    async function fetchInfo() {
       try {
-        setIsLoadingPrice(true);
-        setPriceError(null);
-        const fetchedPrice = await getProductPrice();
-        setPrice(fetchedPrice);
+        setIsLoading(true);
+        setError(null);
+        const { price, stock } = await getProductInfo();
+        setPrice(price);
+        setStock(stock);
       } catch (error: any) {
-        console.error("Failed to fetch price:", error);
-        setPriceError(error.message || "یک خطای ناشناخته رخ داده است.");
+        console.error("Failed to fetch product info:", error);
+        setError(error.message || "یک خطای ناشناخته رخ داده است.");
         toast({
           variant: "destructive",
-          title: "خطا در دریافت قیمت",
-          description: "امکان دریافت قیمت محصول وجود ندارد. لطفا بعدا تلاش کنید.",
+          title: "خطا در دریافت اطلاعات محصول",
+          description: "امکان دریافت قیمت و موجودی محصول وجود ندارد. لطفا بعدا تلاش کنید.",
         });
       } finally {
-        setIsLoadingPrice(false);
+        setIsLoading(false);
       }
     }
 
-    fetchPrice();
+    fetchInfo();
 
   }, [toast]);
 
@@ -80,6 +82,7 @@ export default function Home() {
     localStorage.setItem("userEmail", e.target.value);
   };
 
+  const isOutOfStock = stock === 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-body">
@@ -104,40 +107,56 @@ export default function Home() {
           </p>
         </div>
 
-        {priceError && (
+        {error && (
             <Alert variant="destructive" className="max-w-4xl mx-auto mb-8">
               <Terminal className="h-4 w-4" />
               <AlertTitle>خطا در ارتباط با سرور</AlertTitle>
               <AlertDescription>
-                <p>امکان دریافت قیمت محصول وجود ندارد. لطفاً از موارد زیر اطمینان حاصل کنید:</p>
+                <p>امکان دریافت اطلاعات محصول وجود ندارد. لطفاً از موارد زیر اطمینان حاصل کنید:</p>
                 <ul className="list-disc pl-5 mt-2 text-xs">
-                    <li>آدرس وب اپلیکیشن (Google Apps Script URL) در فایل `.env` صحیح است.</li>
-                    <li>گوگل شیت شما حداقل یک ردیف محصول با `productName` و `priceUSD` دارد.</li>
+                    <li>آدرس وب اپلیکیشن (Google Apps Script URL) در فایل `.env` صحیح است و یک Deployment جدید برای آن ساخته‌اید.</li>
+                    <li>گوگل شیت شما حداقل یک ردیف محصول با `productName` و `priceUSD` و `emailBody` معتبر دارد.</li>
                     <li>اسکریپت Google Apps Script شما به درستی به عنوان Web App پابلیش شده و دسترسی آن روی "Anyone" تنظیم شده است.</li>
                 </ul>
-                <p className="mt-2 text-xs font-mono bg-muted p-2 rounded">جزئیات خطا: {priceError}</p>
+                <p className="mt-2 text-xs font-mono bg-muted p-2 rounded">جزئیات خطا: {error}</p>
               </AlertDescription>
             </Alert>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <Card className="w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300">
+          <Card className={`w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'opacity-50' : ''}`}>
             <CardHeader>
-              <CardTitle className="font-headline text-2xl">
-                کانفیگ V2Ray
-              </CardTitle>
-              <CardDescription>
-                دسترسی دائمی به یک کانفیگ سرور شخصی و پرسرعت V2Ray.
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="font-headline text-2xl">
+                    کانفیگ V2Ray
+                  </CardTitle>
+                  <CardDescription>
+                    دسترسی دائمی به یک کانفیگ سرور شخصی و پرسرعت V2Ray.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Package className="h-5 w-5 text-primary" />
+                  {isLoading ? (
+                    <Skeleton className="h-5 w-16" />
+                  ) : stock !== null ? (
+                    isOutOfStock ? (
+                      <span className="text-destructive">ناموجود</span>
+                    ) : (
+                      <span>{stock} عدد موجود</span>
+                    )
+                  ) : null}
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="text-4xl font-bold font-headline text-foreground text-left dir-ltr">
-                {isLoadingPrice ? (
+                {isLoading ? (
                     <Skeleton className="h-10 w-24" />
                 ) : price !== null ? (
                     `$${price.toFixed(2)}`
                 ) : (
-                     <span className="text-red-500">ناموجود</span>
+                     <span className="text-red-500">نامشخص</span>
                 )}
                 <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره</span>
               </div>
@@ -172,12 +191,14 @@ export default function Home() {
                       dir="ltr"
                     />
                   </div>
-                  <Button type="submit" className="w-full font-bold" disabled={isPending}>
+                  <Button type="submit" className="w-full font-bold" disabled={isPending || isLoading || isOutOfStock}>
                     {isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         در حال پردازش...
                       </>
+                    ) : isOutOfStock ? (
+                       "موجودی تمام شد"
                     ) : (
                       "خرید آنی"
                     )}

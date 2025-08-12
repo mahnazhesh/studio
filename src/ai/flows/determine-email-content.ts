@@ -26,6 +26,7 @@ const DetermineEmailContentOutputSchema = z.object({
   emailSubject: z.string().describe('The subject of the email.'),
   emailBody: z.string().describe('The body of the email.'),
   priceUSD: z.number().describe('The price of the product in USD.'),
+  stockCount: z.number().optional().describe('The number of items in stock.'),
 });
 export type DetermineEmailContentOutput = z.infer<typeof DetermineEmailContentOutputSchema>;
 
@@ -36,15 +37,16 @@ export async function determineEmailContent(input: DetermineEmailContentInput): 
 const getEmailContent = ai.defineTool(
   {
     name: 'getEmailContent',
-    description: 'Retrieves a unique email body (config) and price from a Google Sheet. If the purchase is successful, it deletes the used row.',
+    description: 'Retrieves a unique email body (config) and price from a Google Sheet. If the purchase is successful, it deletes the used row. It can also return the stock count.',
     inputSchema: z.object({
       productName: z.string().describe('The name of the product purchased.'),
       // This tells the script whether to just get the price or to get the config and delete the row.
-      shouldDelete: z.boolean().describe('If true, fetches one config and deletes the row. If false, just gets the price.'),
+      shouldDelete: z.boolean().describe('If true, fetches one config and deletes the row. If false, just gets the price and stock count.'),
     }),
     outputSchema: z.object({
       emailBody: z.string().optional().describe('The unique config/email body from the sheet.'),
       priceUSD: z.number().optional().describe('The price of the product in USD.'),
+      stockCount: z.number().optional().describe('The number of available items.'),
     }),
   },
   async (input) => {
@@ -55,7 +57,7 @@ const getEmailContent = ai.defineTool(
     
     const params = new URLSearchParams({
       productName: input.productName,
-      shouldDelete: String(input.shouldDelete),
+      action: input.shouldDelete ? 'getConfig' : 'getInfo',
     });
 
     // Correctly construct the URL, handling if webAppUrl already has query params.
@@ -85,6 +87,7 @@ const getEmailContent = ai.defineTool(
     return {
       emailBody: data.emailBody,
       priceUSD: data.priceUSD,
+      stockCount: data.stockCount,
     };
   }
 );
@@ -121,9 +124,10 @@ const determineEmailContentFlow = ai.defineFlow(
 
     return {
       // If emailBody is missing (e.g. price check), provide a default value.
-      emailBody: content.emailBody || 'body for price check',
+      emailBody: content.emailBody || 'body for price/stock check',
       priceUSD: content.priceUSD,
       emailSubject: subject,
+      stockCount: content.stockCount,
     };
   }
 );

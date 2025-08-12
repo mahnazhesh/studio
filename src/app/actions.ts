@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { determineEmailContent } from '@/ai/flows/determine-email-content';
+import { determineEmailContent, type DetermineEmailContentOutput } from '@/ai/flows/determine-email-content';
 import { createPlisioInvoice } from '@/lib/plisio';
 
 type State = {
@@ -13,7 +13,7 @@ const emailSchema = z.string().email({ message: "Invalid email address." });
 
 const PRODUCT_NAME = 'V2Ray Config';
 
-export async function getProductPrice(): Promise<number> {
+export async function getProductInfo(): Promise<{ price: number; stock: number }> {
   try {
      const emailContent = await determineEmailContent({
       productName: PRODUCT_NAME,
@@ -21,17 +21,17 @@ export async function getProductPrice(): Promise<number> {
       purchaseStatus: 'pending',
     });
 
-    if (typeof emailContent.priceUSD === 'number' && emailContent.priceUSD > 0) {
-      return emailContent.priceUSD;
+    if (typeof emailContent.priceUSD === 'number' && emailContent.priceUSD > 0 && typeof emailContent.stockCount === 'number') {
+      return { price: emailContent.priceUSD, stock: emailContent.stockCount };
     }
-    console.error("getProductPrice Error: Received invalid price from flow", emailContent);
-    // Provide a more specific error message if the price is invalid
-    throw new Error('Price received from the source is not valid or is zero.');
+    console.error("getProductInfo Error: Received invalid data from flow", emailContent);
+    // Provide a more specific error message
+    throw new Error('Product data received from the source is not valid.');
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
-    console.error("getProductPrice Error:", errorMessage);
+    console.error("getProductInfo Error:", errorMessage);
     // Re-throw the error with details to be caught by the frontend
-    throw new Error(`Could not fetch product price. Details: ${errorMessage}`);
+    throw new Error(`Could not fetch product info. Details: ${errorMessage}`);
   }
 }
 
