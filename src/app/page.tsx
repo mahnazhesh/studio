@@ -82,7 +82,7 @@ export default function Home() {
     localStorage.setItem("userEmail", e.target.value);
   };
 
-  const isOutOfStock = stock === 0;
+  const isOutOfStock = stock !== null && stock <= 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-body">
@@ -107,16 +107,17 @@ export default function Home() {
           </p>
         </div>
 
-        {error && (
+        {error && !isLoading && (
             <Alert variant="destructive" className="max-w-4xl mx-auto mb-8">
               <Terminal className="h-4 w-4" />
               <AlertTitle>خطا در ارتباط با سرور</AlertTitle>
               <AlertDescription>
                 <p>امکان دریافت اطلاعات محصول وجود ندارد. لطفاً از موارد زیر اطمینان حاصل کنید:</p>
                 <ul className="list-disc pl-5 mt-2 text-xs">
-                    <li>آدرس وب اپلیکیشن (Google Apps Script URL) در فایل `.env` صحیح است و یک Deployment جدید برای آن ساخته‌اید.</li>
+                    <li>آدرس وب اپلیکیشن (Google Apps Script URL) در فایل `.env` صحیح است.</li>
+                    <li>برای آخرین نسخه کد Google Apps Script خود یک **New deployment** ساخته‌اید و URL جدید را در `.env` قرار داده‌اید.</li>
                     <li>گوگل شیت شما حداقل یک ردیف محصول با `productName` و `priceUSD` و `emailBody` معتبر دارد.</li>
-                    <li>اسکریپت Google Apps Script شما به درستی به عنوان Web App پابلیش شده و دسترسی آن روی "Anyone" تنظیم شده است.</li>
+                    <li>دسترسی وب اپ (Web App) روی "Anyone" تنظیم شده است.</li>
                 </ul>
                 <p className="mt-2 text-xs font-mono bg-muted p-2 rounded">جزئیات خطا: {error}</p>
               </AlertDescription>
@@ -153,7 +154,7 @@ export default function Home() {
                <div className="text-4xl font-bold font-headline text-foreground text-left dir-ltr">
                 {isLoading ? (
                     <Skeleton className="h-10 w-24" />
-                ) : price !== null ? (
+                ) : price !== null && price > 0 ? (
                     `$${price.toFixed(2)}`
                 ) : (
                      <span className="text-red-500">نامشخص</span>

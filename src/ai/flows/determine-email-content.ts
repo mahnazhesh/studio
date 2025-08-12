@@ -41,7 +41,7 @@ const getEmailContent = ai.defineTool(
     inputSchema: z.object({
       productName: z.string().describe('The name of the product purchased.'),
       // This tells the script whether to just get the price or to get the config and delete the row.
-      shouldDelete: z.boolean().describe('If true, fetches one config and deletes the row. If false, just gets the price and stock count.'),
+      action: z.enum(['getInfo', 'getConfig']).describe("Action to perform: 'getInfo' to get price and stock, 'getConfig' to fetch a config and delete the row."),
     }),
     outputSchema: z.object({
       emailBody: z.string().optional().describe('The unique config/email body from the sheet.'),
@@ -57,10 +57,9 @@ const getEmailContent = ai.defineTool(
     
     const params = new URLSearchParams({
       productName: input.productName,
-      action: input.shouldDelete ? 'getConfig' : 'getInfo',
+      action: input.action,
     });
 
-    // Correctly construct the URL, handling if webAppUrl already has query params.
     const finalUrl = webAppUrl.includes('?') 
         ? `${webAppUrl}&${params.toString()}`
         : `${webAppUrl}?${params.toString()}`;
@@ -69,6 +68,7 @@ const getEmailContent = ai.defineTool(
 
     const response = await fetch(finalUrl, {
       redirect: 'follow', // Important for Apps Script web apps
+      cache: 'no-store', // Disable caching for stock checks
     });
 
     if (!response.ok) {
@@ -99,16 +99,15 @@ const determineEmailContentFlow = ai.defineFlow(
     outputSchema: DetermineEmailContentOutputSchema,
   },
   async (input) => {
-    // If status is 'success', we should fetch a config and delete it.
-    // Otherwise, for 'pending' status, we just need the price.
-    const shouldDelete = input.purchaseStatus === 'success';
+    // If status is 'success', get the config. Otherwise, just get info.
+    const action = input.purchaseStatus === 'success' ? 'getConfig' : 'getInfo';
 
     const content = await getEmailContent({
       productName: input.productName,
-      shouldDelete: shouldDelete,
+      action: action,
     });
 
-    if (typeof content.priceUSD !== 'number' || content.priceUSD <= 0) {
+    if (typeof content.priceUSD !== 'number' || content.priceUSD < 0) {
       console.error("Invalid price received from tool:", content);
       throw new Error('Failed to retrieve a valid price from the data source. Please check the Google Apps Script and the Google Sheet setup.');
     }
@@ -123,7 +122,7 @@ const determineEmailContentFlow = ai.defineFlow(
     }
 
     return {
-      // If emailBody is missing (e.g. price check), provide a default value.
+      // If emailBody is missing (e.g. price/stock check), provide a default value.
       emailBody: content.emailBody || 'body for price/stock check',
       priceUSD: content.priceUSD,
       emailSubject: subject,

@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { determineEmailContent, type DetermineEmailContentOutput } from '@/ai/flows/determine-email-content';
+import { determineEmailContent } from '@/ai/flows/determine-email-content';
 import { createPlisioInvoice } from '@/lib/plisio';
 
 type State = {
@@ -18,19 +18,17 @@ export async function getProductInfo(): Promise<{ price: number; stock: number }
      const emailContent = await determineEmailContent({
       productName: PRODUCT_NAME,
       email: 'pricecheck@example.com', // Dummy email for price check
-      purchaseStatus: 'pending',
+      purchaseStatus: 'pending', // 'pending' maps to 'getInfo' action
     });
 
-    if (typeof emailContent.priceUSD === 'number' && emailContent.priceUSD > 0 && typeof emailContent.stockCount === 'number') {
+    if (typeof emailContent.priceUSD === 'number' && typeof emailContent.stockCount === 'number') {
       return { price: emailContent.priceUSD, stock: emailContent.stockCount };
     }
     console.error("getProductInfo Error: Received invalid data from flow", emailContent);
-    // Provide a more specific error message
     throw new Error('Product data received from the source is not valid.');
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
     console.error("getProductInfo Error:", errorMessage);
-    // Re-throw the error with details to be caught by the frontend
     throw new Error(`Could not fetch product info. Details: ${errorMessage}`);
   }
 }
@@ -44,21 +42,24 @@ export async function createInvoiceAction(prevState: State, formData: FormData):
   }
 
   try {
-    // 1. Get price from Google Sheet via the AI flow.
-    // We pass 'pending' because we only need the price at this stage.
-    const emailContent = await determineEmailContent({
+    // 1. Get price and check stock from Google Sheet via the AI flow.
+    const productInfo = await determineEmailContent({
       productName: PRODUCT_NAME,
       email,
-      purchaseStatus: 'pending',
+      purchaseStatus: 'pending', // 'pending' maps to 'getInfo' action
     });
 
-    if (typeof emailContent.priceUSD !== 'number' || emailContent.priceUSD <= 0) {
+    if (typeof productInfo.priceUSD !== 'number' || productInfo.priceUSD <= 0) {
       throw new Error('Could not determine product price. Please try again later.');
+    }
+    
+    if (typeof productInfo.stockCount !== 'number' || productInfo.stockCount <= 0) {
+       throw new Error('موجودی محصول به اتمام رسیده است.');
     }
     
     // 2. Create an invoice with Plisio
     const invoice = await createPlisioInvoice({
-        amount: emailContent.priceUSD.toString(),
+        amount: productInfo.priceUSD.toString(),
         currency: 'USD',
         orderName: PRODUCT_NAME,
         orderNumber: `${PRODUCT_NAME}-${Date.now()}`,
