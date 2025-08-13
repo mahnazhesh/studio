@@ -1,5 +1,4 @@
-// In a real-world scenario, you would use the official Plisio API.
-// This is a mocked version for demonstration purposes.
+// This file configures the payment invoice for Plisio.
 
 type PlisioInvoicePayload = {
   amount: string;
@@ -40,10 +39,6 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
     const response = await fetch('https://api.plisio.net/api/v1/invoices/new?' + params.toString());
     const data = await response.json();
     
-    // The Plisio API response structure might be different.
-    // This is based on common API patterns.
-    // Example success response: { status: "success", data: { txn_id: "...", invoice_url: "..." } }
-    // Example error response: { status: "error", data: { message: "..." } }
     return data;
 
   } catch (error) {
