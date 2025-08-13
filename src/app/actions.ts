@@ -102,7 +102,7 @@ export async function checkPaymentStatusAction(txn_id: string, email: string): P
             const params = new URLSearchParams({
                 action: 'sendSuccessEmail',
                 productName: PRODUCT_NAME,
-                userEmail: email, // Use the email saved in local storage
+                userEmail: email,
             });
             const finalUrl = `${webAppUrl}?${params.toString()}`;
             

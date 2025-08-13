@@ -1,0 +1,23 @@
+# Netlify configuration file
+# https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  # Directory to change to before starting a build.
+  # This is where we will look for package.json/.nvmrc/etc.
+  base = "."
+
+  # The command to build your site
+  command = "npm run build"
+
+  # The directory to publish (relative to the base directory)
+  publish = ".next"
+
+[build.environment]
+  # Set environment variables for the build process
+  # You should set these in the Netlify UI for better security
+  # GOOGLE_APPS_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_DEPLOYMENT_URL"
+  # PLISIO_SECRET_KEY = "YOUR_PLISIO_SECRET_KEY"
+  # NEXT_PUBLIC_APP_URL = "YOUR_SITE_URL"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
