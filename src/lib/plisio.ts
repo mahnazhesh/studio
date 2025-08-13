@@ -15,7 +15,12 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
     throw new Error("Plisio API key is not configured.");
   }
   
-  const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/payment-callback`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) {
+    throw new Error("NEXT_PUBLIC_APP_URL is not configured in .env file.");
+  }
+  
+  const callbackUrl = `${appUrl}/api/payment-callback`;
 
   const params = new URLSearchParams({
     api_key: apiKey,
@@ -26,10 +31,9 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
     order_number: payload.orderNumber,
     email: payload.email,
     callback_url: callbackUrl,
-    // You might want to add success_url and fail_url to redirect the user
-    // after payment completion or failure from the Plisio page.
-    // success_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
-    // fail_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/failed`,
+    // Add success_url and fail_url to redirect the user after payment.
+    success_url: `${appUrl}/payment/success`,
+    fail_url: `${appUrl}/payment/failed`,
   });
 
   try {
