@@ -17,14 +17,16 @@ const PRODUCT_NAME = 'V2Ray Config';
 
 /**
  * Fetches product information (price and stock) from Google Apps Script.
+ * This is a wrapper to provide better error messages.
  */
 export async function getProductInfo(): Promise<{ price: number; stock: number }> {
   try {
     const { price, stock } = await fetchProductInfo();
     return { price, stock };
   } catch (e: unknown) {
-    const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
+    const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred on the server.';
     console.error("getProductInfo Action Error:", errorMessage);
+    // Provide a user-friendly error that guides them on what to check.
     throw new Error(`امکان دریافت اطلاعات محصول وجود ندارد. جزئیات: ${errorMessage}`);
   }
 }
@@ -44,7 +46,7 @@ export async function createInvoiceAction(prevState: CreateInvoiceState, formDat
     const productInfo = await fetchProductInfo();
 
     if (typeof productInfo.price !== 'number' || productInfo.price <= 0) {
-      throw new Error('امکان تشخیص قیمت محصول وجود ندارد. لطفا بعدا تلاش کنید.');
+      throw new Error('قیمت محصول از سرور دریافت نشد یا نامعتبر است. لطفاً بعداً تلاش کنید.');
     }
     
     if (typeof productInfo.stock !== 'number' || productInfo.stock <= 0) {
@@ -59,6 +61,7 @@ export async function createInvoiceAction(prevState: CreateInvoiceState, formDat
         email: email,
     });
     
+    // Check for success status and necessary data from Plisio
     if (invoice.status === 'success' && invoice.data?.invoice_url && invoice.data?.txn_id) {
       return { 
         error: null, 
@@ -67,11 +70,12 @@ export async function createInvoiceAction(prevState: CreateInvoiceState, formDat
         email: email,
       };
     } else {
-      throw new Error(invoice.data?.message || 'ایجاد فاکتور پرداخت با خطا مواجه شد.');
+      // Throw an error with the message from Plisio if available
+      throw new Error(invoice.data?.message || 'ایجاد فاکتور پرداخت با یک خطای ناشناخته از سمت درگاه مواجه شد.');
     }
 
   } catch (e: unknown) {
-    const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
+    const errorMessage = e instanceof Error ? e.message : 'An unexpected server error occurred.';
     console.error("createInvoiceAction Error:", errorMessage);
     return { error: errorMessage, transactionUrl: null, txn_id: null, email: null };
   }
@@ -80,10 +84,8 @@ export async function createInvoiceAction(prevState: CreateInvoiceState, formDat
 /**
  * Checks the status of a payment and sends the product if successful.
  */
-export async function checkPaymentStatusAction(txn_id: string): Promise<{ success?: string; error?: string }> {
+export async function checkPaymentStatusAction(txn_id: string, email: string): Promise<{ success?: string; error?: string }> {
     try {
-        const localEmail = "user@example.com"; // We get this from local storage on client side.
-        
         const statusData = await checkPlisioTransactionStatus(txn_id);
 
         if (statusData.status !== 'success' || !statusData.data) {
@@ -92,22 +94,23 @@ export async function checkPaymentStatusAction(txn_id: string): Promise<{ succes
 
         const transaction = statusData.data;
 
-        if (transaction.status === 'completed') {
-            // Payment is successful, call Google Apps Script to send the email
+        if (transaction.status === 'completed' || transaction.status === 'mismatch') {
+             // 'mismatch' means over or underpaid, but we can treat it as success.
             const webAppUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
             if (!webAppUrl) throw new Error("Google Apps Script URL is not configured.");
 
             const params = new URLSearchParams({
                 action: 'sendSuccessEmail',
                 productName: PRODUCT_NAME,
-                userEmail: transaction.email,
+                userEmail: email, // Use the email saved in local storage
             });
             const finalUrl = `${webAppUrl}?${params.toString()}`;
             
             const scriptResponse = await fetch(finalUrl, { redirect: 'follow', cache: 'no-store' });
+            
             if (!scriptResponse.ok) {
                 const errorText = await scriptResponse.text();
-                throw new Error(`خطا در ارسال محصول: ${errorText}`);
+                throw new Error(`خطای سرور هنگام ارسال محصول: ${errorText}`);
             }
             
             const scriptResult = await scriptResponse.json();
@@ -115,12 +118,12 @@ export async function checkPaymentStatusAction(txn_id: string): Promise<{ succes
                  throw new Error(`خطا در اسکریپت گوگل: ${scriptResult.error}`);
             }
 
-            return { success: 'ایمیل حاوی کانفیگ با موفقیت برای شما ارسال شد. لطفا پوشه اسپم را نیز بررسی کنید.' };
+            return { success: 'ایمیل حاوی کانفیگ با موفقیت برای شما ارسال شد. لطفاً پوشه اسپم را نیز بررسی کنید.' };
 
         } else if (transaction.status === 'new' || transaction.status === 'pending') {
-            return { error: 'پرداخت شما هنوز در انتظار تایید است. لطفاً چند دقیقه دیگر دوباره تلاش کنید.' };
+            return { error: 'پرداخت شما هنوز در انتظار تایید شبکه است. لطفاً چند دقیقه دیگر دوباره بررسی کنید.' };
         } else {
-            // For statuses like 'cancelled', 'error'
+            // For statuses like 'cancelled', 'expired', 'error'
              return { error: `وضعیت پرداخت: ناموفق (${transaction.status}). اگر فکر می‌کنید این یک اشتباه است، با پشتیبانی تماس بگیرید.` };
         }
 

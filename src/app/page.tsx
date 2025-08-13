@@ -59,7 +59,7 @@ export default function Home() {
         setStock(stock);
       } catch (error: any) {
         console.error("Failed to fetch product info:", error);
-        setProductInfoError(error.message || "یک خطای ناشناخته رخ داده است.");
+        setProductInfoError(error.message || "یک خطای ناشناخته در دریافت اطلاعات محصول رخ داد.");
         setPrice(0); 
         setStock(0);
       } finally {
@@ -79,8 +79,9 @@ export default function Home() {
       });
     } else if (invoiceState?.transactionUrl && invoiceState?.txn_id && invoiceState?.email) {
       // Save transaction info to local storage for checking later
-      localStorage.setItem('pendingTx', JSON.stringify({ txn_id: invoiceState.txn_id, email: invoiceState.email }));
-      setPendingTx({ txn_id: invoiceState.txn_id, email: invoiceState.email });
+      const txData = { txn_id: invoiceState.txn_id, email: invoiceState.email };
+      localStorage.setItem('pendingTx', JSON.stringify(txData));
+      setPendingTx(txData);
       // Redirect user to Plisio
       window.location.href = invoiceState.transactionUrl;
     }
@@ -90,7 +91,12 @@ export default function Home() {
   useEffect(() => {
     const savedTx = localStorage.getItem('pendingTx');
     if (savedTx) {
-      setPendingTx(JSON.parse(savedTx));
+      try {
+        setPendingTx(JSON.parse(savedTx));
+      } catch(e) {
+        console.error("Failed to parse pending transaction from localStorage", e);
+        localStorage.removeItem('pendingTx');
+      }
     }
   }, []);
 
@@ -104,7 +110,7 @@ export default function Home() {
     if (!pendingTx) return;
     setCheckStatusResult(null);
     startPaymentCheck(async () => {
-      const result = await checkPaymentStatusAction(pendingTx.txn_id);
+      const result = await checkPaymentStatusAction(pendingTx.txn_id, pendingTx.email);
       setCheckStatusResult(result);
       if (result.success) {
         localStorage.removeItem('pendingTx');
@@ -207,9 +213,10 @@ export default function Home() {
                     <Skeleton className="h-5 w-16" />
                   ) : isOutOfStock ? (
                       <span className="text-destructive font-bold">اتمام موجودی</span>
-                    ) : (
+                    ) : stock !== null ? (
                       <span>{stock} عدد موجود</span>
-                  )}
+                    ) : null
+                  }
                 </div>
               </div>
             </CardHeader>
@@ -219,10 +226,11 @@ export default function Home() {
                     <Skeleton className="h-10 w-24" />
                 ) : price !== null && price > 0 ? (
                     `$${price.toFixed(2)}`
-                ) : (
+                ) : !productInfoError ? (
                      <span className="text-base text-red-500">قیمت نامشخص</span>
-                )}
-                <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره (LTC)</span>
+                ) : null
+                }
+                { price !== null && price > 0 && <span className="text-base font-normal text-muted-foreground ml-2">/ پرداخت یک‌باره (LTC)</span>}
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
