@@ -40,11 +40,11 @@ export async function getProductInfo(): Promise<ProductInfo> {
         throw new Error(`The Google Apps Script returned an error: ${data.error}`);
     }
 
-    if (typeof data.priceUSD !== 'number' || typeof data.stockCount !== 'number') {
+    if (typeof data.price !== 'number' || typeof data.stock !== 'number') {
         throw new Error('The data received from the server was incomplete or in the wrong format.');
     }
 
-    return { price: data.priceUSD, stock: data.stockCount };
+    return { price: data.price, stock: data.stock };
 
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';

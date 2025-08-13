@@ -10,7 +10,7 @@ type PlisioInvoicePayload = {
 
 /**
  * Creates a new payment invoice with Plisio.
- * Note: We are not using success_url or fail_url because we now have a manual check flow.
+ * This is now simplified as we only need the invoice URL.
  */
 export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
   const apiKey = process.env.PLISIO_SECRET_KEY;
@@ -18,7 +18,6 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
     throw new Error("Plisio API key is not configured in .env file.");
   }
   
-  // No callback URL is needed for the manual check flow.
   const params = new URLSearchParams({
     api_key: apiKey,
     currency: payload.currency,
@@ -27,8 +26,6 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
     order_name: payload.orderName,
     order_number: payload.orderNumber,
     email: payload.email,
-    // We intentionally leave callback_url, success_url, and fail_url empty
-    // to keep the user on the Plisio page and rely on our manual check.
   });
 
   try {
@@ -46,12 +43,8 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
   } catch (error) {
     console.error("Plisio API call failed:", error);
     const errorMessage = error instanceof Error ? error.message : 'Could not connect to the payment provider.';
-    return {
-      status: 'error',
-      data: {
-        message: errorMessage
-      }
-    };
+    // Re-throw the error to be caught by the server action
+    throw new Error(errorMessage);
   }
 }
 
@@ -83,11 +76,6 @@ export async function checkPlisioTransactionStatus(txn_id: string) {
     } catch (error) {
         console.error("Plisio API call (check status) failed:", error);
         const errorMessage = error instanceof Error ? error.message : 'Could not connect to the payment provider to check status.';
-        return {
-            status: 'error',
-            data: {
-                message: errorMessage
-            }
-        };
+        throw new Error(errorMessage);
     }
 }

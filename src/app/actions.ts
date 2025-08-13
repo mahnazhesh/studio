@@ -43,7 +43,7 @@ export async function createInvoiceAction(prevState: CreateInvoiceState, formDat
   }
 
   try {
-    const productInfo = await fetchProductInfo();
+    const productInfo = await getProductInfo();
 
     if (typeof productInfo.price !== 'number' || productInfo.price <= 0) {
       throw new Error('قیمت محصول از سرور دریافت نشد یا نامعتبر است. لطفاً بعداً تلاش کنید.');
