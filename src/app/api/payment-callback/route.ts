@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
     
     const status = body.get("status") as string;
     const userEmail = body.get("email") as string;
+    // We use a fixed product name as defined in the main page.
     const productName = "V2Ray Config"; 
 
     console.log(`Received Plisio callback for ${userEmail} with status: ${status}`);
@@ -26,8 +27,8 @@ export async function POST(request: NextRequest) {
     } else if (status === 'cancelled' || status === 'error') {
         action = 'sendFailureEmail';
     } else {
-        // For other statuses (like 'new' or 'pending'), do nothing.
-        console.log(`Status is '${status}', no action taken.`);
+        // For other statuses (like 'new' or 'pending'), we don't take action yet.
+        console.log(`Status is '${status}', which is not final. No action taken.`);
         return NextResponse.json({ status: "success", message: "Status is not final, no action taken." });
     }
     
@@ -43,10 +44,7 @@ export async function POST(request: NextRequest) {
       userEmail,
     });
     
-    // Ensure the final URL is correctly formatted, even if the base URL already has parameters.
-    const finalUrl = webAppUrl.includes('?') 
-      ? `${webAppUrl}&${params.toString()}`
-      : `${webAppUrl}?${params.toString()}`;
+    const finalUrl = `${webAppUrl}?${params.toString()}`;
 
     console.log(`Calling Google Apps Script with URL: ${finalUrl}`);
     
@@ -71,8 +69,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error processing Plisio callback:", errorMessage);
-    // It's better not to return a success response to Plisio if our backend fails,
-    // so it might retry the webhook.
+    // Let Plisio know that our server failed, so it might retry the webhook.
     return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 });
   }
 }
