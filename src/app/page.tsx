@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { createInvoiceAction, getProductInfo } from "@/app/actions";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { createInvoiceAction, getProductInfo, checkPaymentStatusAction } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,70 +14,104 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck, Zap, Globe, Terminal, Package } from "lucide-react";
+import { Loader2, ShieldCheck, Zap, Globe, Terminal, Package, CheckCircle, AlertTriangle } from "lucide-react";
 import { Logo } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const initialState = {
+const createInvoiceInitialState = {
   error: null,
   transactionUrl: null,
+  txn_id: null,
+  email: null,
 };
 
+type PendingTransaction = {
+  txn_id: string;
+  email: string;
+}
+
 export default function Home() {
-  const [state, formAction, isPending] = useActionState(createInvoiceAction, initialState);
+  const [invoiceState, formAction, isInvoicePending] = useActionState(createInvoiceAction, createInvoiceInitialState);
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [price, setPrice] = useState<number | null>(null);
   const [stock, setStock] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [productInfoError, setProductInfoError] = useState<string | null>(null);
+  const [isLoadingProductInfo, setIsLoadingProductInfo] = useState(true);
+  
+  const [isCheckingPayment, startPaymentCheck] = useTransition();
+  const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
+  const [checkStatusResult, setCheckStatusResult] = useState<{success?: string, error?: string} | null>(null);
 
+  // Effect to fetch product info on mount
   useEffect(() => {
     const savedEmail = localStorage.getItem("userEmail");
-    if (savedEmail) {
-      setEmail(savedEmail);
-    }
+    if (savedEmail) setEmail(savedEmail);
     
     async function fetchInfo() {
       try {
-        setIsLoading(true);
-        setError(null);
+        setIsLoadingProductInfo(true);
+        setProductInfoError(null);
         const { price, stock } = await getProductInfo();
         setPrice(price);
         setStock(stock);
       } catch (error: any) {
         console.error("Failed to fetch product info:", error);
-        setError(error.message || "یک خطای ناشناخته رخ داده است.");
+        setProductInfoError(error.message || "یک خطای ناشناخته رخ داده است.");
         setPrice(0); 
         setStock(0);
       } finally {
-        setIsLoading(false);
+        setIsLoadingProductInfo(false);
       }
     }
-
     fetchInfo();
-
   }, []);
-
+  
+  // Effect to handle invoice creation result
   useEffect(() => {
-    if (state?.transactionUrl) {
-      window.location.href = state.transactionUrl;
-    }
-    if (state?.error) {
+    if (invoiceState?.error) {
        toast({
         variant: "destructive",
         title: "خطایی رخ داد",
-        description: state.error,
+        description: invoiceState.error,
       });
+    } else if (invoiceState?.transactionUrl && invoiceState?.txn_id && invoiceState?.email) {
+      // Save transaction info to local storage for checking later
+      localStorage.setItem('pendingTx', JSON.stringify({ txn_id: invoiceState.txn_id, email: invoiceState.email }));
+      setPendingTx({ txn_id: invoiceState.txn_id, email: invoiceState.email });
+      // Redirect user to Plisio
+      window.location.href = invoiceState.transactionUrl;
     }
-  }, [state, toast]);
+  }, [invoiceState, toast]);
+  
+  // Effect to check for a pending transaction in local storage on page load
+  useEffect(() => {
+    const savedTx = localStorage.getItem('pendingTx');
+    if (savedTx) {
+      setPendingTx(JSON.parse(savedTx));
+    }
+  }, []);
+
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     localStorage.setItem("userEmail", e.target.value);
   };
+
+  const handleCheckPayment = () => {
+    if (!pendingTx) return;
+    setCheckStatusResult(null);
+    startPaymentCheck(async () => {
+      const result = await checkPaymentStatusAction(pendingTx.txn_id);
+      setCheckStatusResult(result);
+      if (result.success) {
+        localStorage.removeItem('pendingTx');
+        setPendingTx(null);
+      }
+    });
+  }
 
   const isOutOfStock = stock !== null && stock <= 0;
 
@@ -104,30 +138,59 @@ export default function Home() {
           </p>
         </div>
 
-        {error && !isLoading && (
+        {productInfoError && !isLoadingProductInfo && (
             <Alert variant="destructive" className="max-w-4xl mx-auto mb-8">
               <Terminal className="h-4 w-4" />
               <AlertTitle>خطا در ارتباط با سرور</AlertTitle>
               <AlertDescription>
-                <p>امکان دریافت اطلاعات محصول (قیمت و موجودی) وجود ندارد. لطفاً موارد زیر را با دقت بررسی کنید:</p>
-                <ul className="list-disc pl-5 mt-2 text-sm">
-                    <li>**آدرس وب اپلیکیشن:** مطمئن شوید آدرس (Google Apps Script URL) در فایل `.env` صحیح است.</li>
-                    <li>**دیپلوی جدید:** برای آخرین نسخه کد Google Apps Script خود حتما یک **New deployment** ساخته‌اید و URL جدید را در `.env` قرار داده‌اید.</li>
-                    <li>**نام ستون‌ها:** مطمئن شوید گوگل شیت شما **دقیقا** این سه ستون را با همین نام‌ها (حساس به حروف کوچک و بزرگ) دارد:
-                      <code className="block bg-muted p-1 my-1 rounded text-xs">productName</code>
-                      <code className="block bg-muted p-1 my-1 rounded text-xs">priceUSD</code>
-                      <code className="block bg-muted p-1 my-1 rounded text-xs">emailBody</code>
-                    </li>
-                    <li>**دسترسی:** دسترسی وب اپ (Web App) روی "Anyone" تنظیم شده باشد.</li>
-                    <li>**محتوای شیت:** حداقل یک ردیف محصول با `productName` برابر با `V2Ray Config` و یک قیمت معتبر در ستون `priceUSD` داشته باشید.</li>
-                </ul>
-                <p className="mt-2 text-xs font-mono bg-muted p-2 rounded">جزئیات خطا: {error}</p>
+                <p>امکان دریافت اطلاعات محصول (قیمت و موجودی) وجود ندارد.</p>
+                <p className="mt-2 text-xs font-mono bg-muted p-2 rounded">جزئیات خطا: {productInfoError}</p>
               </AlertDescription>
+            </Alert>
+        )}
+        
+        {pendingTx && !checkStatusResult?.success && (
+          <Card className="max-w-4xl mx-auto mb-8 border-accent">
+            <CardHeader className="text-center">
+              <CardTitle>یک سفارش در انتظار دارید</CardTitle>
+              <CardDescription>
+                به نظر می‌رسد شما یک پرداخت را شروع کرده‌اید. اگر پرداخت را کامل کرده‌اید، روی دکمه زیر کلیک کنید تا سفارش شما را بررسی و تحویل دهیم.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {checkStatusResult?.error && (
+                 <Alert variant="destructive" className="mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>بررسی ناموفق</AlertTitle>
+                    <AlertDescription>{checkStatusResult.error}</AlertDescription>
+                </Alert>
+              )}
+              <Button onClick={handleCheckPayment} className="w-full" disabled={isCheckingPayment}>
+                {isCheckingPayment ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    در حال بررسی وضعیت پرداخت...
+                  </>
+                ) : (
+                  "پرداخت را انجام دادم، سفارشم را تحویل بده"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        
+        {checkStatusResult?.success && (
+            <Alert variant="default" className="max-w-4xl mx-auto mb-8 bg-green-50 border-green-300">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800">پرداخت شما با موفقیت تایید شد</AlertTitle>
+                <AlertDescription className="text-green-700">
+                    {checkStatusResult.success}
+                </AlertDescription>
             </Alert>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <Card className={`w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300 ${isOutOfStock && !isLoading ? 'opacity-50' : ''}`}>
+          <Card className={`w-full shadow-lg border-2 border-primary transform hover:scale-105 transition-transform duration-300 ${isOutOfStock && !isLoadingProductInfo ? 'opacity-50' : ''}`}>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
@@ -140,7 +203,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Package className="h-5 w-5 text-primary" />
-                  {isLoading ? (
+                  {isLoadingProductInfo ? (
                     <Skeleton className="h-5 w-16" />
                   ) : isOutOfStock ? (
                       <span className="text-destructive font-bold">اتمام موجودی</span>
@@ -152,7 +215,7 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="text-4xl font-bold font-headline text-foreground text-left dir-ltr">
-                {isLoading ? (
+                {isLoadingProductInfo ? (
                     <Skeleton className="h-10 w-24" />
                 ) : price !== null && price > 0 ? (
                     `$${price.toFixed(2)}`
@@ -192,14 +255,16 @@ export default function Home() {
                       dir="ltr"
                     />
                   </div>
-                  <Button type="submit" className="w-full font-bold" disabled={isPending || isLoading || isOutOfStock}>
-                    {isPending ? (
+                  <Button type="submit" className="w-full font-bold" disabled={isInvoicePending || isLoadingProductInfo || isOutOfStock || !!pendingTx}>
+                    {isInvoicePending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        در حال پردازش...
+                        در حال ایجاد فاکتور...
                       </>
                     ) : isOutOfStock ? (
                        "اتمام موجودی"
+                    ) : !!pendingTx ? (
+                      "یک سفارش در انتظار دارید"
                     ) : (
                       "پرداخت با لایت‌کوین (LTC)"
                     )}
