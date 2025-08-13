@@ -20,7 +20,6 @@ export async function getProductInfo(): Promise<{ price: number; stock: number }
   } catch (e: unknown) {
     const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
     console.error("getProductInfo Action Error:", errorMessage);
-    // Re-throw with a user-friendly message
     throw new Error(`امکان دریافت اطلاعات محصول وجود ندارد. جزئیات: ${errorMessage}`);
   }
 }
@@ -34,7 +33,6 @@ export async function createInvoiceAction(prevState: State, formData: FormData):
   }
 
   try {
-    // 1. Get price and check stock directly.
     const productInfo = await fetchProductInfo();
 
     if (typeof productInfo.price !== 'number' || productInfo.price <= 0) {
@@ -45,17 +43,15 @@ export async function createInvoiceAction(prevState: State, formData: FormData):
        throw new Error('موجودی محصول به اتمام رسیده است.');
     }
     
-    // 2. Create an invoice with Plisio
     const invoice = await createPlisioInvoice({
         amount: productInfo.price.toString(),
-        currency: 'LTC', // پرداخت فقط با لایت‌کوین
+        currency: 'LTC', 
         orderName: PRODUCT_NAME,
         orderNumber: `${PRODUCT_NAME}-${Date.now()}`,
         email: email,
     });
     
     if (invoice.status === 'success' && invoice.data?.invoice_url) {
-      // 3. Return the URL for redirection
       return { error: null, transactionUrl: invoice.data.invoice_url };
     } else {
       throw new Error(invoice.data?.message || 'ایجاد فاکتور پرداخت با خطا مواجه شد.');

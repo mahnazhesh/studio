@@ -2,7 +2,7 @@
 
 type PlisioInvoicePayload = {
   amount: string;
-  currency: 'LTC'; // Only LTC is supported
+  currency: 'LTC';
   orderName: string;
   orderNumber: string;
   email: string;
@@ -19,18 +19,19 @@ export async function createPlisioInvoice(payload: PlisioInvoicePayload) {
     throw new Error("NEXT_PUBLIC_APP_URL is not configured in .env file.");
   }
   
+  // This is the server-to-server webhook URL. Plisio sends a POST here.
   const callbackUrl = `${appUrl}/api/payment-callback`;
 
   const params = new URLSearchParams({
     api_key: apiKey,
-    currency: payload.currency, // e.g., 'LTC'
-    source_currency: 'USD', // The currency of the amount in your sheet
+    currency: payload.currency,
+    source_currency: 'USD',
     source_amount: payload.amount,
     order_name: payload.orderName,
     order_number: payload.orderNumber,
     email: payload.email,
     callback_url: callbackUrl,
-    // Add success_url and fail_url to redirect the user after payment.
+    // These URLs are for redirecting the user's browser after payment.
     success_url: `${appUrl}/payment/success`,
     fail_url: `${appUrl}/payment/failed`,
   });
