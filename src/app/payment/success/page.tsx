@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -13,14 +14,14 @@ export default function PaymentSuccessPage() {
            <div className="mx-auto bg-green-100 rounded-full p-3 w-fit">
              <CheckCircle2 className="h-10 w-10 text-green-600" />
            </div>
-          <CardTitle className="text-2xl font-bold mt-4">پرداخت موفقیت‌آمیز بود</CardTitle>
+          <CardTitle className="text-2xl font-bold mt-4">پرداخت شما با موفقیت انجام شد</CardTitle>
           <CardDescription>
-            از خرید شما متشکریم! کانفیگ V2Ray شما تا چند لحظه دیگر به آدرس ایمیلتان ارسال خواهد شد.
+            از خرید شما سپاسگزاریم! ایمیل حاوی کانفیگ V2Ray تا چند لحظه دیگر به آدرس ایمیل ثبت‌شده شما ارسال خواهد شد.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-             لطفاً پوشه اسپم ایمیل خود را نیز بررسی کنید.
+             لطفاً پوشه اسپم (Spam) ایمیل خود را نیز بررسی کنید. اگر پس از چند دقیقه ایمیل را دریافت نکردید، با پشتیبانی تماس بگیرید.
           </p>
           <Button asChild className="w-full">
             <Link href="/">بازگشت به صفحه اصلی</Link>
