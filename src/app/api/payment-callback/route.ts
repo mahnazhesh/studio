@@ -1,3 +1,4 @@
+
 import { NextResponse, type NextRequest } from "next/server";
 
 // This is the webhook handler for Plisio.
@@ -19,15 +20,18 @@ export async function POST(request: NextRequest) {
 
     let action: 'sendSuccessEmail' | 'sendFailureEmail' | null = null;
     
+    // Determine the action for the Apps Script based on Plisio's status
     if (status === 'completed') {
         action = 'sendSuccessEmail';
     } else if (status === 'cancelled' || status === 'error') {
         action = 'sendFailureEmail';
     } else {
+        // For other statuses (like 'new' or 'pending'), do nothing.
         console.log(`Status is '${status}', no action taken.`);
         return NextResponse.json({ status: "success", message: "Status is not final, no action taken." });
     }
     
+    // Call the Google Apps Script to handle everything (get config, delete row, send email)
     const webAppUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
     if (!webAppUrl) {
       throw new Error("Google Apps Script URL is not configured in .env file.");
@@ -61,11 +65,14 @@ export async function POST(request: NextRequest) {
         throw new Error(`Error from Google Apps Script: ${responseData.error}`);
     }
 
+    // Respond to Plisio that the webhook was received successfully.
     return NextResponse.json({ status: "success", message: "Webhook processed by Apps Script." });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error processing Plisio callback:", errorMessage);
+    // It's better not to return a success response to Plisio if our backend fails,
+    // so it might retry the webhook.
     return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 });
   }
 }
