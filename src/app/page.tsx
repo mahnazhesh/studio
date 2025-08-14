@@ -112,7 +112,10 @@ export default function Home() {
     startPaymentCheck(async () => {
       const result = await checkPaymentStatusAction(pendingTx.txn_id, pendingTx.email);
       setCheckStatusResult(result);
-      if (result.success) {
+      
+      // If the payment was successful OR it failed definitively (e.g. cancelled, expired),
+      // clear the pending transaction to allow the user to start over.
+      if (result.success || (result.error && !result.error.includes('در انتظار تایید'))) {
         localStorage.removeItem('pendingTx');
         setPendingTx(null);
       }
