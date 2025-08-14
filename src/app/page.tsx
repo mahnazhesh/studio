@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { createInvoiceAction, getProductInfo, checkPaymentStatusAction } from "@/app/actions";
+import { useEffect, useState, useTransition } from "react";
+import { getProductInfo, checkPaymentStatusAction } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,16 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, ShieldCheck, Zap, Globe, Terminal, Package, CheckCircle, AlertTriangle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-const createInvoiceInitialState = {
-  error: null,
-  transactionUrl: null,
-  txn_id: null,
-  email: null,
-};
 
 type PendingTransaction = {
   txn_id: string;
@@ -33,7 +25,6 @@ type PendingTransaction = {
 }
 
 export default function Home() {
-  const [invoiceState, formAction, isInvoicePending] = useActionState(createInvoiceAction, createInvoiceInitialState);
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [price, setPrice] = useState<number | null>(null);
@@ -69,41 +60,51 @@ export default function Home() {
     fetchInfo();
   }, []);
   
-  // Effect to handle invoice creation result
-  useEffect(() => {
-    if (invoiceState?.error) {
-       toast({
-        variant: "destructive",
-        title: "خطایی رخ داد",
-        description: invoiceState.error,
-      });
-    } else if (invoiceState?.transactionUrl && invoiceState?.txn_id && invoiceState?.email) {
-      // Save transaction info to local storage for checking later
-      const txData = { txn_id: invoiceState.txn_id, email: invoiceState.email };
-      localStorage.setItem('pendingTx', JSON.stringify(txData));
-      setPendingTx(txData);
-      // Open Plisio in a new tab
-      window.open(invoiceState.transactionUrl, '_blank');
-    }
-  }, [invoiceState, toast]);
-  
   // Effect to check for a pending transaction in local storage on page load
   useEffect(() => {
     const savedTx = localStorage.getItem('pendingTx');
     if (savedTx) {
       try {
-        setPendingTx(JSON.parse(savedTx));
+        const parsedTx = JSON.parse(savedTx);
+        // Basic validation of the parsed object
+        if (parsedTx && typeof parsedTx.txn_id === 'string' && typeof parsedTx.email === 'string') {
+          setPendingTx(parsedTx);
+        } else {
+          localStorage.removeItem('pendingTx');
+        }
       } catch(e) {
         console.error("Failed to parse pending transaction from localStorage", e);
         localStorage.removeItem('pendingTx');
       }
     }
+
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'pendingTx' && event.newValue) {
+            try {
+                const newTx = JSON.parse(event.newValue);
+                 if (newTx && typeof newTx.txn_id === 'string' && typeof newTx.email === 'string') {
+                    setPendingTx(newTx);
+                 }
+            } catch (e) {
+                console.error("Error parsing new pendingTx from storage event", e);
+            }
+        } else if (event.key === 'pendingTx' && !event.newValue) {
+            setPendingTx(null);
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-    localStorage.setItem("userEmail", e.target.value);
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    localStorage.setItem("userEmail", newEmail);
   };
 
   const handleCheckPayment = () => {
@@ -121,7 +122,7 @@ export default function Home() {
       }
     });
   }
-
+  
   const isOutOfStock = stock !== null && stock <= 0;
 
   return (
@@ -249,7 +250,7 @@ export default function Home() {
                   عبور از محدودیت‌های جغرافیایی
                 </li>
               </ul>
-              <form action={formAction}>
+              <form action="/processing" method="GET" target="_blank">
                 <div className="space-y-4">
                    <div className="space-y-2">
                     <Label htmlFor="email" className="font-bold">آدرس ایمیل</Label>
@@ -266,13 +267,8 @@ export default function Home() {
                       dir="ltr"
                     />
                   </div>
-                  <Button type="submit" className="w-full font-bold" disabled={isInvoicePending || isLoadingProductInfo || isOutOfStock || !!pendingTx}>
-                    {isInvoicePending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        در حال ایجاد فاکتور...
-                      </>
-                    ) : isOutOfStock ? (
+                  <Button type="submit" className="w-full font-bold" disabled={isLoadingProductInfo || isOutOfStock || !!pendingTx}>
+                    {isOutOfStock ? (
                        "اتمام موجودی"
                     ) : !!pendingTx ? (
                       "یک سفارش در انتظار دارید"
@@ -312,4 +308,11 @@ export default function Home() {
       </footer>
     </div>
   );
+}
+
+// Hiding useToast for now as it's not used in the page component directly
+const useToast = () => {
+    return {
+        toast: () => {}
+    }
 }
