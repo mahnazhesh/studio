@@ -15,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, ShieldCheck, Zap, Globe, Terminal, Package, CheckCircle, AlertTriangle } from "lucide-react";
-import { Logo } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -129,7 +128,7 @@ export default function Home() {
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Logo className="h-8 w-8 text-primary" />
+            <ShieldCheck className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold font-headline text-foreground">
               فروشگاه v2ray جوادی
             </span>
