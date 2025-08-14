@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
@@ -81,8 +82,8 @@ export default function Home() {
       const txData = { txn_id: invoiceState.txn_id, email: invoiceState.email };
       localStorage.setItem('pendingTx', JSON.stringify(txData));
       setPendingTx(txData);
-      // Redirect user to Plisio
-      window.location.href = invoiceState.transactionUrl;
+      // Open Plisio in a new tab
+      window.open(invoiceState.transactionUrl, '_blank');
     }
   }, [invoiceState, toast]);
   
@@ -297,7 +298,7 @@ export default function Home() {
               <p className="text-4xl font-bold font-headline text-muted-foreground animate-pulse">
                 به زودی
               </p>
-            </CardContent>
+            </cardContent>
             <CardFooter>
                  <p className="text-xs text-muted-foreground">منتظر به‌روزرسانی‌ها باشید!</p>
             </CardFooter>
