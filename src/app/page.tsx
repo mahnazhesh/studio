@@ -298,7 +298,7 @@ export default function Home() {
               <p className="text-4xl font-bold font-headline text-muted-foreground animate-pulse">
                 به زودی
               </p>
-            </cardContent>
+            </CardContent>
             <CardFooter>
                  <p className="text-xs text-muted-foreground">منتظر به‌روزرسانی‌ها باشید!</p>
             </CardFooter>
