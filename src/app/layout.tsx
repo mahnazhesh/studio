@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'فروشگاه کانفیگ V2Ray',
+  title: 'فروشگاه v2ray جوادی',
   description: 'کانفیگ V2Ray خود را خریداری کنید.',
 };
 

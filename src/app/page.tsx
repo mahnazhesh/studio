@@ -131,7 +131,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Logo className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold font-headline text-foreground">
-              V2Ray فروشگاه
+              فروشگاه v2ray جوادی
             </span>
           </div>
         </nav>
@@ -307,7 +307,8 @@ export default function Home() {
       </main>
 
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm">
-        <p>&copy; {new Date().getFullYear()} فروشگاه V2Ray. تمام حقوق محفوظ است.</p>
+        <p>&copy; {new Date().getFullYear()} فروشگاه v2ray جوادی. تمام حقوق محفوظ است.</p>
+        <p className="mt-2">پشتیبانی تلگرام: 09044163072</p>
       </footer>
     </div>
   );
