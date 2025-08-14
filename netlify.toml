@@ -21,3 +21,10 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# This rewrite rule is crucial for Next.js apps on Netlify.
+# It ensures that all paths are handled by the Next.js router.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
